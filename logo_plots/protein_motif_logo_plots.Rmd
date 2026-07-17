@@ -1,0 +1,215 @@
+---
+title: "protein_motif_logo_plots"
+author: "Janet Young\n"
+date: "`r Sys.Date()`\n"
+output: github_document
+always_allow_html: true
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(here)      # for tracking project home dir location
+library(patchwork) # for showing >1 ggplot together
+library(janitor)   # for clean_names() function 
+library(universalmotif)
+library(ggseqlogo)
+
+source(here("logo_plots/protein_motif_logo_plots_functions.R"))
+
+# library(kableExtra)
+# library(Biostrings)
+# library(GenomicRanges)
+# library(plyranges)
+# library(ggseqlogo)
+# library(xml2)
+```
+
+
+
+# Read MEME output
+
+Read meme.txt file using universalmotif::read_meme
+
+
+```{r}
+meme_dir <- here("logo_plots/meme_protein_motifs/EZHIP_sequences_used_for_MEME_analyses.fa_meme/")
+
+meme_txt_file <- paste0(meme_dir, "meme.txt")
+
+suppressMessages( meme_output <- universalmotif::read_meme(
+    meme_txt_file, 
+    readsites=TRUE, readsites.meta = TRUE ) )
+# message = Could not find strand info, assuming +.
+```
+
+
+## Parse MEME output to get all instances
+
+
+Put motif information into a simpler tbl called `all_motif_instances` that has one row for every motif instance.
+
+```{r}
+all_motif_instances <- lapply(names(meme_output[["sites.meta"]]), function(x) {
+    meme_output[["sites.meta"]][[x]] |> 
+        as_tibble() |> 
+        mutate(motif_long_name=x) 
+}) |> 
+    bind_rows() |> 
+    clean_names() |> 
+    dplyr::rename(query_seq=sequence, 
+                  instance_pval=pvalue, 
+                  instance_seq=site) |> 
+    relocate(motif_long_name)
+```
+
+Rename motifs based on their order in the human sequence (`Human_EZHIP`), so that new names are EZHIP-1 to EZHIP-10:
+
+```{r}
+human_motif_instances <- all_motif_instances |> 
+    filter(query_seq=="Human_EZHIP") |> 
+    arrange(position) |> 
+    mutate(ezhip_motif_index=row_number()) |> 
+    mutate(motif_id = paste0("EZHIP-", ezhip_motif_index)) |> 
+    relocate(motif_id, ezhip_motif_index)
+```
+
+Get a simple tbl called `EZHIP_motif_summary` with one row for each of the ten motifs, and add on the EZHIP-1-style name
+
+```{r}
+EZHIP_motif_summary <- lapply(meme_output[["motifs"]], function(x) {
+    output <- x |>
+        as.data.frame()|>
+        as_tibble() |> 
+        mutate(eval_string = x@extrainfo) |> 
+        mutate(width= ncol(x))
+}) |> 
+    bind_rows() |> 
+    select(-family, -organism, -alphabet, -pval, -qval, -bkgsites, -strand) |> 
+    dplyr::rename(motif_long_name=name,
+                  orig_name=altname) |> 
+    mutate(orig_index = as.integer(str_remove_all(orig_name, "MEME-"))) |> 
+    left_join(human_motif_instances |>
+                  select(motif_id, motif_long_name, ezhip_motif_index),
+              by="motif_long_name") |> 
+    relocate(motif_id, orig_name, orig_index, ezhip_motif_index) |> 
+    arrange(ezhip_motif_index)
+```
+
+
+
+## Get PCMs for each motif, determine most common amino acids and their frequencies
+
+Get each motif as a PCM (position count matrix)
+
+```{r}
+meme_output_pcms <- lapply(meme_output[["motifs"]], function(x) {
+    ## colnames are initially the amino acids in the motif name/consensus, rather than positions
+    output <- convert_type(x,"PCM")@motif 
+    colnames(output) <- 1:dim(output)[2]
+    return(output)
+})
+names(meme_output_pcms) <- sapply(meme_output[["motifs"]], function(x) {x@name})
+```
+
+Now for each motif, we find the most common amino acid at each position, and its frequency. 
+
+```{r}
+motifs_most_common_each_pos <- lapply(names(meme_output_pcms), function(x) {
+    meme_output_pcms[[x]] |> 
+        get_most_common_eachPos() |> 
+        mutate(motif_long_name=x)
+}) |> 
+    bind_rows() |> 
+    left_join(EZHIP_motif_summary |> 
+                  select(motif_long_name, motif_id, ezhip_motif_index, orig_name),
+              by="motif_long_name") |> 
+    relocate(motif_long_name, motif_id, ezhip_motif_index, orig_name) |> 
+    arrange(ezhip_motif_index, pos)|> 
+    mutate(most_common_perc = 100*most_common_freq)
+```
+
+
+
+
+## Show motif logo plots, adding stars for conserved residues (80% threshold)
+
+
+Show all logo plots - use * to highlight residues in >=80% of motif instances
+
+
+```{r logo plots star80, fig.height=12, fig.width=5, warning=FALSE, message=FALSE}
+new_logo_plots_ggseqlogo <- lapply(1:nrow(EZHIP_motif_summary), function(i) {
+    ## so I can make sure they're all on the same scale:
+    max_width <-  max(EZHIP_motif_summary$width)
+    
+    ## get info on THIS motif
+    this_motif_info <- EZHIP_motif_summary |> 
+        filter(ezhip_motif_index==i)
+    
+    ## get conserved positions
+    temp_df <- motifs_most_common_each_pos |> 
+        filter(motif_id==this_motif_info$motif_id) |> 
+        filter(most_common_freq>=0.8) |> 
+        select(pos, most_common, most_common_freq) |> 
+        mutate(y_pos=4.4) |> 
+        mutate(symbol="*")
+    
+    p1 <- convert_type(meme_output[["motifs"]][[this_motif_info$orig_index]],"PPM")["motif"] |> 
+        ggseqlogo(col_scheme=weblogo_chemistry_color_scheme_ggseqlogo) +
+        guides(fill = "none") 
+    
+    ## change axis limits
+    suppressMessages( p1 <- p1 + 
+                          coord_cartesian(xlim=c(1,max_width),
+                                          ylim=c(0,4.8)))
+    
+    ## plot aesthetics
+    p1 <- p1 +
+        geom_text(data=temp_df, 
+                  aes(x=pos, y=y_pos, label=symbol),
+                  inherit.aes = FALSE,
+                  size=5) + 
+        labs(title=this_motif_info$motif_id,
+             subtitle=paste0(  "E=", this_motif_info$eval_string, " ; ",
+                               "n=", this_motif_info$nsites,
+                               " (", this_motif_info$orig_name, ")")) +
+        scale_y_continuous(breaks = 0:4) + # Manually specify y-axis ticks 
+        theme(spacing=unit(5, "points"),
+              axis.text.x=element_blank(), 
+              ## y axis:
+              axis.line.y=element_line(linewidth=0.25), 
+              axis.ticks.y=element_line(linewidth=0.25),
+              axis.text.y=element_text(size=6),
+              axis.title.y=element_text(size=8),
+              title=element_text(size=7),
+              plot.subtitle=element_text(size=6)) 
+    
+    p1
+})
+
+names(new_logo_plots_ggseqlogo) <- EZHIP_motif_summary$motif_id
+
+### show all logos:
+p1 <- wrap_plots( new_logo_plots_ggseqlogo,
+                  ncol = 1, 
+                  byrow = FALSE ) +
+    plot_annotation(title="EZHIP motifs", 
+                    subtitle="* = residues present in >=80% motif instances")
+
+p1
+
+ggsave(p1,
+       file=here("logo_plots/Rscript_output/motifs_star80.pdf"),
+       height=12, width=5)
+```
+
+
+
+
+# Finished - show package versions used
+
+```{r}
+sessionInfo()
+```

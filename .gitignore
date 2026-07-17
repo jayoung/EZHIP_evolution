@@ -1,3 +1,14 @@
+###### My stuff
+
+## within each folder I'll put a file with a name like this so I know where within the EZHIP_janet repo the files came from 
+file_source_notes*.md
+
+
+## other files to ignore
+slurm-*
+
+###### below is from the .gitignore template
+
 # History files
 .Rhistory
 .Rapp.history
