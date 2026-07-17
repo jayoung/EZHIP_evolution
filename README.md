@@ -1,6 +1,6 @@
 # EZHIP_evolution
 
-Files and scripts related to EZHIP evolution manuscript "Dynamic evolution of EZHIP, an inhibitor of the Polycomb Repressive Complex 2 in mammals"
+Files and scripts related to EZHIP evolution manuscript "Dynamic evolution of EZHIP, an inhibitor of the Polycomb Repressive Complex 2 in mammals", Raman et al 2026
 
 [BioRxiv preprint](https://www.biorxiv.org/content/10.64898/2025.12.12.693809v2)
 
