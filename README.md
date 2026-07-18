@@ -7,7 +7,7 @@ Files and scripts related to EZHIP evolution manuscript "Dynamic evolution of EZ
 
 WORK IN PROGRESS!  Not ready to resubmit yet - still adding stuff
 
-## PHYML
+## Phylogenies
 
 
 ## RNA-seq analysis
@@ -16,7 +16,7 @@ WORK IN PROGRESS!  Not ready to resubmit yet - still adding stuff
 
 ## PAML analysis
 
-PAML was run on in-frame nucleotide alignments using code in Janet Young's [pamlWrapper](https://github.com/jayoung/pamlWrapper) github repository.
+PAML was run on in-frame nucleotide alignments using code in Janet Young's [pamlWrapper](https://github.com/jayoung/pamlWrapper) github repository, which includes code to generate the input phylogenies for PAML. 
 
 ## Figure 2, protein motif logo plots
 
