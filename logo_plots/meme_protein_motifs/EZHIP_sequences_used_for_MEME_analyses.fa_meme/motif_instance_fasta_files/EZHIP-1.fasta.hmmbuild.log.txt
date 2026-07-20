@@ -1,0 +1,30 @@
+
+### Running hmmbuild
+
+# hmmbuild :: profile HMM construction from multiple sequence alignments
+# HMMER 3.4 (Aug 2023); http://hmmer.org/
+# Copyright (C) 2023 Howard Hughes Medical Institute.
+# Freely distributed under the BSD open source license.
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# input alignment file:             EZHIP-1.fasta
+# output HMM file:                  EZHIP-1.fasta.hmm
+# number of worker threads:         4
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+# idx name                  nseq  alen  mlen eff_nseq re/pos description
+#---- -------------------- ----- ----- ----- -------- ------ -----------
+1     EZHIP-1                 52    29    29    10.13  1.854 
+
+# CPU time: 0.04u 0.00s 00:00:00.04 Elapsed: 00:00:00.04
+
+### Running hmmpress
+
+Working...    done.
+Pressed and indexed 1 HMMs (1 names).
+Models pressed into binary file:   EZHIP-1.fasta.hmm.h3m
+SSI index for binary model file:   EZHIP-1.fasta.hmm.h3i
+Profiles (MSV part) pressed into:  EZHIP-1.fasta.hmm.h3f
+Profiles (remainder) pressed into: EZHIP-1.fasta.hmm.h3p
+
+### Done
+

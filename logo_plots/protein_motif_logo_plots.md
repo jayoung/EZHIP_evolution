@@ -157,6 +157,24 @@ motif9_trimmed <- narrow(all_motif_instances_forFasta[["EZHIP-9"]], start=3, end
 writeXStringSet(motif9_trimmed, filepath = paste0(output_dir, "EZHIP-9-trimmed_3to16.fasta"))
 ```
 
+Then, on the linux command line, we make HMMs for each motif as follows:
+
+First we change to the directory where our R script output the instances
+for each motif:
+
+    cd EZHIP_evolution/logo_plots/meme_protein_motifs/EZHIP_sequences_used_for_MEME_analyses.fa_meme/motif_instance_fasta_files 
+
+Then we run a script called run_hmmbuild.pl which creates and runs a
+shell script for each motif
+
+    ../../../other_scripts/run_hmmbuild.pl EZHIP*fasta
+
+The shell scripts each contain commands like this:
+
+    module load HMMER/3.4-gompi-2023a
+    hmmbuild EZHIP-1.fasta.hmm EZHIP-1.fasta
+    hmmpress EZHIP-1.fasta.hmm
+
 ## Show motif logo plots, adding stars for conserved residues (80% threshold)
 
 Show all logo plots - use \* to highlight residues in \>=80% of motif
