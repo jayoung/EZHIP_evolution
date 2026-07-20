@@ -9,9 +9,11 @@ WORK IN PROGRESS!  Not ready to resubmit yet - still adding stuff
 
 ## Phylogenies
 
+Pravrutha ?
 
 ## RNA-seq analysis
 
+Pravrutha / Alice ?
 
 
 ## PAML analysis
