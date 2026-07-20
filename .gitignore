@@ -7,6 +7,9 @@ file_source_notes*.md
 ## other files to ignore
 slurm-*
 *fasta.hmm*
+*fasta
+*_meme
+.vscode
 
 ###### below is from the .gitignore template
 

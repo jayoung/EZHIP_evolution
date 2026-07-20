@@ -30,8 +30,6 @@ The `meme_protein_motifs` folder contains:
 
 - [`meme.sh`](logo_plots/meme_protein_motifs/meme.sh) : the shell script used to run MEME to identify protein motifs, using the same parameters used by the [web implementation of MEME](https://meme-suite.org/meme/tools/meme).
 
-- [`EZHIP_sequences_used_for_MEME_analyses.fa_meme`](logo_plots/meme_protein_motifs/EZHIP_sequences_used_for_MEME_analyses.fa_meme) : a directory containing the output of commands in `meme.sh` 
-
 And the R script [`protein_motif_logo_plots.Rmd`](logo_plots/protein_motif_logo_plots.Rmd) contains code used to:
 - read MEME output (`meme.txt`)
 - reorder EZHIP motifs based on position in human EZHIP, rather than by best score
