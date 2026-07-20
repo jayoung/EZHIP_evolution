@@ -15,15 +15,9 @@ library(patchwork) # for showing >1 ggplot together
 library(janitor)   # for clean_names() function 
 library(universalmotif)
 library(ggseqlogo)
+library(Biostrings)
 
 source(here("logo_plots/protein_motif_logo_plots_functions.R"))
-
-# library(kableExtra)
-# library(Biostrings)
-# library(GenomicRanges)
-# library(plyranges)
-# library(ggseqlogo)
-# library(xml2)
 ```
 
 
@@ -130,6 +124,56 @@ motifs_most_common_each_pos <- lapply(names(meme_output_pcms), function(x) {
     mutate(most_common_perc = 100*most_common_freq)
 ```
 
+
+## Output fasta files of all instances for each motif
+
+We use these to make HMMs to search genomes for additional homologs
+
+First we add EZHIP-style names to `all_motif_instances` to create `all_motif_instances_plusInfo`.
+
+```{r}
+all_motif_instances_plusInfo <- all_motif_instances |> 
+    left_join(human_motif_instances |> 
+                  select(motif_long_name, motif_id, ezhip_motif_index), 
+              by="motif_long_name") |> 
+    relocate(motif_id, ezhip_motif_index) |> 
+    ## join MEME_style ID back to all_motif_instances
+    left_join(EZHIP_motif_summary |> 
+                  select(motif_long_name, orig_name, orig_index),
+              by="motif_long_name") |> 
+    relocate(orig_name, orig_index)
+```
+
+Then we use `all_motif_instances_plusInfo` to export fasta files of the motif instances for each motif (they'll be aligned by default) so that I can make HMMs to scan the genome with.
+
+
+```{r}
+all_motif_instances_forFasta <- split(all_motif_instances_plusInfo, all_motif_instances_plusInfo$motif_id)
+
+all_motif_instances_forFasta <- lapply(all_motif_instances_forFasta, function(x) {
+    aa <- AAStringSet(x$instance_seq)
+    names(aa) <- paste(x$motif_id, x$query_seq, sep="_")
+    return(aa)
+})
+
+## actually write fasta files    
+output_dir <- paste0(meme_dir, "motif_instance_fasta_files/")
+
+temp <- lapply(names(all_motif_instances_forFasta), function(x) {
+    outfile <- paste0(output_dir, x, ".fasta")
+    writeXStringSet(all_motif_instances_forFasta[[x]], filepath = outfile)
+    return(NULL)
+})
+rm(temp)
+```
+
+
+For motif 9 I will also save fasta file for a trimmed version, positions 3-16 - just the more conserved positions (AVRMRASSPSPPGR)
+
+```{r}
+motif9_trimmed <- narrow(all_motif_instances_forFasta[["EZHIP-9"]], start=3, end=16)
+writeXStringSet(motif9_trimmed, filepath = paste0(output_dir, "EZHIP-9-trimmed_3to16.fasta"))
+```
 
 
 
