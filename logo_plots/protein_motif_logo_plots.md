@@ -2,7 +2,7 @@ protein_motif_logo_plots
 ================
 Janet Young
 
-2026-07-16
+2026-07-20
 
 # Read MEME output
 
@@ -103,6 +103,58 @@ motifs_most_common_each_pos <- lapply(names(meme_output_pcms), function(x) {
     relocate(motif_long_name, motif_id, ezhip_motif_index, orig_name) |> 
     arrange(ezhip_motif_index, pos)|> 
     mutate(most_common_perc = 100*most_common_freq)
+```
+
+## Output fasta files of all instances for each motif
+
+We use these to make HMMs to search genomes for additional homologs
+
+First we add EZHIP-style names to `all_motif_instances` to create
+`all_motif_instances_plusInfo`.
+
+``` r
+all_motif_instances_plusInfo <- all_motif_instances |> 
+    left_join(human_motif_instances |> 
+                  select(motif_long_name, motif_id, ezhip_motif_index), 
+              by="motif_long_name") |> 
+    relocate(motif_id, ezhip_motif_index) |> 
+    ## join MEME_style ID back to all_motif_instances
+    left_join(EZHIP_motif_summary |> 
+                  select(motif_long_name, orig_name, orig_index),
+              by="motif_long_name") |> 
+    relocate(orig_name, orig_index)
+```
+
+Then we use `all_motif_instances_plusInfo` to export fasta files of the
+motif instances for each motif (they’ll be aligned by default) so that I
+can make HMMs to scan the genome with.
+
+``` r
+all_motif_instances_forFasta <- split(all_motif_instances_plusInfo, all_motif_instances_plusInfo$motif_id)
+
+all_motif_instances_forFasta <- lapply(all_motif_instances_forFasta, function(x) {
+    aa <- AAStringSet(x$instance_seq)
+    names(aa) <- paste(x$motif_id, x$query_seq, sep="_")
+    return(aa)
+})
+
+## actually write fasta files    
+output_dir <- paste0(meme_dir, "motif_instance_fasta_files/")
+
+temp <- lapply(names(all_motif_instances_forFasta), function(x) {
+    outfile <- paste0(output_dir, x, ".fasta")
+    writeXStringSet(all_motif_instances_forFasta[[x]], filepath = outfile)
+    return(NULL)
+})
+rm(temp)
+```
+
+For motif 9 I will also save fasta file for a trimmed version, positions
+3-16 - just the more conserved positions (AVRMRASSPSPPGR)
+
+``` r
+motif9_trimmed <- narrow(all_motif_instances_forFasta[["EZHIP-9"]], start=3, end=16)
+writeXStringSet(motif9_trimmed, filepath = paste0(output_dir, "EZHIP-9-trimmed_3to16.fasta"))
 ```
 
 ## Show motif logo plots, adding stars for conserved residues (80% threshold)
@@ -206,31 +258,32 @@ sessionInfo()
     ## tzcode source: system (glibc)
     ## 
     ## attached base packages:
-    ## [1] stats     graphics  grDevices utils     datasets  methods   base     
+    ## [1] stats4    stats     graphics  grDevices utils     datasets  methods  
+    ## [8] base     
     ## 
     ## other attached packages:
-    ##  [1] ggseqlogo_0.2.2       universalmotif_1.28.0 janitor_2.2.1        
-    ##  [4] patchwork_1.3.2       here_1.0.2            lubridate_1.9.5      
-    ##  [7] forcats_1.0.1         stringr_1.6.0         dplyr_1.2.1          
-    ## [10] purrr_1.2.2           readr_2.2.0           tidyr_1.3.2          
-    ## [13] tibble_3.3.1          ggplot2_4.0.2         tidyverse_2.0.0      
+    ##  [1] Biostrings_2.78.0     Seqinfo_1.0.0         XVector_0.50.0       
+    ##  [4] IRanges_2.44.0        S4Vectors_0.48.1      BiocGenerics_0.56.0  
+    ##  [7] generics_0.1.4        ggseqlogo_0.2.2       universalmotif_1.28.0
+    ## [10] janitor_2.2.1         patchwork_1.3.2       here_1.0.2           
+    ## [13] lubridate_1.9.5       forcats_1.0.1         stringr_1.6.0        
+    ## [16] dplyr_1.2.1           purrr_1.2.2           readr_2.2.0          
+    ## [19] tidyr_1.3.2           tibble_3.3.1          ggplot2_4.0.2        
+    ## [22] tidyverse_2.0.0      
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] generics_0.1.4        stringi_1.8.7         hms_1.1.4            
-    ##  [4] digest_0.6.39         magrittr_2.0.5        evaluate_1.0.5       
-    ##  [7] grid_4.5.2            timechange_0.4.0      RColorBrewer_1.1-3   
-    ## [10] fastmap_1.2.0         rprojroot_2.1.1       scales_1.4.0         
-    ## [13] Biostrings_2.78.0     textshaping_1.0.5     cli_3.6.6            
-    ## [16] crayon_1.5.3          rlang_1.2.0           XVector_0.50.0       
-    ## [19] withr_3.0.3           yaml_2.3.12           otel_0.2.0           
-    ## [22] tools_4.5.2           tzdb_0.5.0            BiocGenerics_0.56.0  
-    ## [25] vctrs_0.7.2           R6_2.6.1              matrixStats_1.5.0    
-    ## [28] stats4_4.5.2          lifecycle_1.0.5       Seqinfo_1.0.0        
-    ## [31] snakecase_0.11.1      IRanges_2.44.0        S4Vectors_0.48.1     
-    ## [34] MASS_7.3-65           ragg_1.5.2            pkgconfig_2.0.3      
-    ## [37] pillar_1.11.1         gtable_0.3.6          Rcpp_1.1.2           
-    ## [40] glue_1.8.1            systemfonts_1.3.2     xfun_0.57            
-    ## [43] tidyselect_1.2.1      MatrixGenerics_1.22.0 rstudioapi_0.19.0    
-    ## [46] knitr_1.51            dichromat_2.0-0.1     farver_2.1.2         
-    ## [49] htmltools_0.5.9       rmarkdown_2.31        compiler_4.5.2       
-    ## [52] S7_0.2.1
+    ##  [1] stringi_1.8.7         hms_1.1.4             digest_0.6.39        
+    ##  [4] magrittr_2.0.5        evaluate_1.0.5        grid_4.5.2           
+    ##  [7] timechange_0.4.0      RColorBrewer_1.1-3    fastmap_1.2.0        
+    ## [10] rprojroot_2.1.1       scales_1.4.0          textshaping_1.0.5    
+    ## [13] cli_3.6.6             crayon_1.5.3          rlang_1.2.0          
+    ## [16] withr_3.0.3           yaml_2.3.12           otel_0.2.0           
+    ## [19] tools_4.5.2           tzdb_0.5.0            vctrs_0.7.2          
+    ## [22] R6_2.6.1              matrixStats_1.5.0     lifecycle_1.0.5      
+    ## [25] snakecase_0.11.1      MASS_7.3-65           ragg_1.5.2           
+    ## [28] pkgconfig_2.0.3       pillar_1.11.1         gtable_0.3.6         
+    ## [31] Rcpp_1.1.2            glue_1.8.1            systemfonts_1.3.2    
+    ## [34] xfun_0.57             tidyselect_1.2.1      MatrixGenerics_1.22.0
+    ## [37] rstudioapi_0.19.0     knitr_1.51            dichromat_2.0-0.1    
+    ## [40] farver_2.1.2          htmltools_0.5.9       rmarkdown_2.31       
+    ## [43] compiler_4.5.2        S7_0.2.1
