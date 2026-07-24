@@ -26,17 +26,17 @@ In the `logo_plots` directory:
 
 The `meme_protein_motifs` folder contains:
 
-- the input fasta file for MEME analysis: [`EZHIP_sequences_used_for_MEME_analyses.fa`](logo_plots/meme_protein_motifs/EZHIP_sequences_used_for_MEME_analyses.fa)
+- the input fasta file for MEME analysis: [`EZHIP_sequences_used_for_MEME_analyses.fa`](motif_analysis/meme_protein_motifs/EZHIP_sequences_used_for_MEME_analyses.fa)
 
-- [`meme.sh`](logo_plots/meme_protein_motifs/meme.sh) : the shell script used to run MEME to identify protein motifs, using the same parameters used by the [web implementation of MEME](https://meme-suite.org/meme/tools/meme).
+- [`meme.sh`](motif_analysis/meme_protein_motifs/meme.sh) : the shell script used to run MEME to identify protein motifs, using the same parameters used by the [web implementation of MEME](https://meme-suite.org/meme/tools/meme).
 
-And the R script [`protein_motif_logo_plots.Rmd`](logo_plots/protein_motif_logo_plots.Rmd) contains code used to:
+And the R script [`protein_motif_logo_plots.Rmd`](motif_analysis/protein_motif_logo_plots.Rmd) contains code used to:
 - read MEME output (`meme.txt`)
 - reorder EZHIP motifs based on position in human EZHIP, rather than by best score
 - determine conservation levels at each motif position 
 - replot motif logo plots using the chosen color scheme, and adding star symbols to residues conserved in >=80% of motif occurrences
 
-The output of that R script is included [here](logo_plots/protein_motif_logo_plots.md).
+The output of that R script is included [here](motif_analysis/protein_motif_logo_plots.md).
 
 
 
@@ -58,3 +58,6 @@ When I want to install some packages:
 - To install a package from Github I do this: `renv::install("bioc/memes")`
 
 After I install or update packages, and I'm happy that everything runs OK, I lock the setup: `renv::snapshot()`
+
+
+xxx could try to use `targets` package which is supposed to let you chain together notebooks, like snakemake but for R

@@ -1,15 +1,34 @@
-protein_motif_logo_plots
-================
-Janet Young
+---
+title: "protein_motif_logo_plots"
+author: "Janet Young\n"
+date: "`r Sys.Date()`\n"
+output: github_document
+always_allow_html: true
+---
 
-2026-07-20
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(here)      # for tracking project home dir location
+library(patchwork) # for showing >1 ggplot together
+library(janitor)   # for clean_names() function 
+library(universalmotif)
+library(ggseqlogo)
+library(Biostrings)
+
+source(here("motif_analysis/protein_motif_logo_plots_functions.R"))
+```
+
+
 
 # Read MEME output
 
 Read meme.txt file using universalmotif::read_meme
 
-``` r
-meme_dir <- here("logo_plots/meme_protein_motifs/EZHIP_sequences_used_for_MEME_analyses.fa_meme/")
+
+```{r}
+meme_dir <- here("motif_analysis/meme_protein_motifs/EZHIP_sequences_used_for_MEME_analyses.fa_meme/")
 
 meme_txt_file <- paste0(meme_dir, "meme.txt")
 
@@ -19,12 +38,13 @@ suppressMessages( meme_output <- universalmotif::read_meme(
 # message = Could not find strand info, assuming +.
 ```
 
+
 ## Parse MEME output to get all instances
 
-Put motif information into a simpler tbl called `all_motif_instances`
-that has one row for every motif instance.
 
-``` r
+Put motif information into a simpler tbl called `all_motif_instances` that has one row for every motif instance.
+
+```{r}
 all_motif_instances <- lapply(names(meme_output[["sites.meta"]]), function(x) {
     meme_output[["sites.meta"]][[x]] |> 
         as_tibble() |> 
@@ -38,10 +58,9 @@ all_motif_instances <- lapply(names(meme_output[["sites.meta"]]), function(x) {
     relocate(motif_long_name)
 ```
 
-Rename motifs based on their order in the human sequence
-(`Human_EZHIP`), so that new names are EZHIP-1 to EZHIP-10:
+Rename motifs based on their order in the human sequence (`Human_EZHIP`), so that new names are EZHIP-1 to EZHIP-10:
 
-``` r
+```{r}
 human_motif_instances <- all_motif_instances |> 
     filter(query_seq=="Human_EZHIP") |> 
     arrange(position) |> 
@@ -50,10 +69,9 @@ human_motif_instances <- all_motif_instances |>
     relocate(motif_id, ezhip_motif_index)
 ```
 
-Get a simple tbl called `EZHIP_motif_summary` with one row for each of
-the ten motifs, and add on the EZHIP-1-style name
+Get a simple tbl called `EZHIP_motif_summary` with one row for each of the ten motifs, and add on the EZHIP-1-style name
 
-``` r
+```{r}
 EZHIP_motif_summary <- lapply(meme_output[["motifs"]], function(x) {
     output <- x |>
         as.data.frame()|>
@@ -73,11 +91,13 @@ EZHIP_motif_summary <- lapply(meme_output[["motifs"]], function(x) {
     arrange(ezhip_motif_index)
 ```
 
+
+
 ## Get PCMs for each motif, determine most common amino acids and their frequencies
 
 Get each motif as a PCM (position count matrix)
 
-``` r
+```{r}
 meme_output_pcms <- lapply(meme_output[["motifs"]], function(x) {
     ## colnames are initially the amino acids in the motif name/consensus, rather than positions
     output <- convert_type(x,"PCM")@motif 
@@ -87,10 +107,9 @@ meme_output_pcms <- lapply(meme_output[["motifs"]], function(x) {
 names(meme_output_pcms) <- sapply(meme_output[["motifs"]], function(x) {x@name})
 ```
 
-Now for each motif, we find the most common amino acid at each position,
-and its frequency.
+Now for each motif, we find the most common amino acid at each position, and its frequency. 
 
-``` r
+```{r}
 motifs_most_common_each_pos <- lapply(names(meme_output_pcms), function(x) {
     meme_output_pcms[[x]] |> 
         get_most_common_eachPos() |> 
@@ -105,14 +124,14 @@ motifs_most_common_each_pos <- lapply(names(meme_output_pcms), function(x) {
     mutate(most_common_perc = 100*most_common_freq)
 ```
 
+
 ## Output fasta files of all instances for each motif
 
 We use these to make HMMs to search genomes for additional homologs
 
-First we add EZHIP-style names to `all_motif_instances` to create
-`all_motif_instances_plusInfo`.
+First we add EZHIP-style names to `all_motif_instances` to create `all_motif_instances_plusInfo`.
 
-``` r
+```{r}
 all_motif_instances_plusInfo <- all_motif_instances |> 
     left_join(human_motif_instances |> 
                   select(motif_long_name, motif_id, ezhip_motif_index), 
@@ -125,11 +144,10 @@ all_motif_instances_plusInfo <- all_motif_instances |>
     relocate(orig_name, orig_index)
 ```
 
-Then we use `all_motif_instances_plusInfo` to export fasta files of the
-motif instances for each motif (they’ll be aligned by default) so that I
-can make HMMs to scan the genome with.
+Then we use `all_motif_instances_plusInfo` to export fasta files of the motif instances for each motif (they'll be aligned by default) so that I can make HMMs to scan the genome with.
 
-``` r
+
+```{r}
 all_motif_instances_forFasta <- split(all_motif_instances_plusInfo, all_motif_instances_plusInfo$motif_id)
 
 all_motif_instances_forFasta <- lapply(all_motif_instances_forFasta, function(x) {
@@ -149,38 +167,53 @@ temp <- lapply(names(all_motif_instances_forFasta), function(x) {
 rm(temp)
 ```
 
-For motif 9 I will also save fasta file for a trimmed version, positions
-3-16 - just the more conserved positions (AVRMRASSPSPPGR)
 
-``` r
+For motif 9 I will also save fasta file for a trimmed version, positions 3-16 - just the more conserved positions (AVRMRASSPSPPGR)
+
+```{r}
 motif9_trimmed <- narrow(all_motif_instances_forFasta[["EZHIP-9"]], start=3, end=16)
 writeXStringSet(motif9_trimmed, filepath = paste0(output_dir, "EZHIP-9-trimmed_3to16.fasta"))
 ```
 
 Then, on the linux command line, we make HMMs for each motif as follows:
 
-First we change to the directory where our R script output the instances
-for each motif:
+First we change to the directory where our R script output the instances for each motif:
 
-    cd EZHIP_evolution/logo_plots/meme_protein_motifs/EZHIP_sequences_used_for_MEME_analyses.fa_meme/motif_instance_fasta_files 
+```
+cd EZHIP_evolution/motif_analysis/meme_protein_motifs/EZHIP_sequences_used_for_MEME_analyses.fa_meme/motif_instance_fasta_files 
+```
 
-Then we run a script called run_hmmbuild.pl which creates and runs a
-shell script for each motif
+Then we run a script called run_hmmbuild.pl which creates and runs a shell script for each motif
 
-    ../../../other_scripts/run_hmmbuild.pl EZHIP*fasta
+```
+../../../other_scripts/run_hmmbuild.pl EZHIP*fasta
+```
 
 The shell scripts each contain commands like this:
+```
+module load HMMER/3.4-gompi-2023a
+hmmbuild EZHIP-1.fasta.hmm EZHIP-1.fasta
+hmmpress EZHIP-1.fasta.hmm
+```
 
-    module load HMMER/3.4-gompi-2023a
-    hmmbuild EZHIP-1.fasta.hmm EZHIP-1.fasta
-    hmmpress EZHIP-1.fasta.hmm
+We then combine the ten motif HMMs into a a single file and rerun `hmmpress`
+
+```
+cat EZHIP-?.fasta*hmm EZHIP-??.fasta*hmm > all_ten_motifs.hmm
+
+module purge
+module load HMMER/3.4-gompi-2023a
+hmmpress all_ten_motifs.hmm
+module purge
+```
 
 ## Show motif logo plots, adding stars for conserved residues (80% threshold)
 
-Show all logo plots - use \* to highlight residues in \>=80% of motif
-instances
 
-``` r
+Show all logo plots - use * to highlight residues in >=80% of motif instances
+
+
+```{r logo plots star80, fig.height=12, fig.width=5, warning=FALSE, message=FALSE}
 new_logo_plots_ggseqlogo <- lapply(1:nrow(EZHIP_motif_summary), function(i) {
     ## so I can make sure they're all on the same scale:
     max_width <-  max(EZHIP_motif_summary$width)
@@ -240,68 +273,17 @@ p1 <- wrap_plots( new_logo_plots_ggseqlogo,
                     subtitle="* = residues present in >=80% motif instances")
 
 p1
-```
 
-![](protein_motif_logo_plots_files/figure-gfm/logo%20plots%20star80-1.png)<!-- -->
-
-``` r
 ggsave(p1,
-       file=here("logo_plots/Rscript_output/motifs_star80.pdf"),
+       file=here("motif_analysis/Rscript_output/motifs_star80.pdf"),
        height=12, width=5)
 ```
 
+
+
+
 # Finished - show package versions used
 
-``` r
+```{r}
 sessionInfo()
 ```
-
-    ## R version 4.5.2 (2025-10-31)
-    ## Platform: x86_64-pc-linux-gnu
-    ## Running under: Ubuntu 24.04.3 LTS
-    ## 
-    ## Matrix products: default
-    ## BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
-    ## LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.26.so;  LAPACK version 3.12.0
-    ## 
-    ## locale:
-    ##  [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
-    ##  [3] LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8    
-    ##  [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
-    ##  [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                 
-    ##  [9] LC_ADDRESS=C               LC_TELEPHONE=C            
-    ## [11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
-    ## 
-    ## time zone: Etc/UTC
-    ## tzcode source: system (glibc)
-    ## 
-    ## attached base packages:
-    ## [1] stats4    stats     graphics  grDevices utils     datasets  methods  
-    ## [8] base     
-    ## 
-    ## other attached packages:
-    ##  [1] Biostrings_2.78.0     Seqinfo_1.0.0         XVector_0.50.0       
-    ##  [4] IRanges_2.44.0        S4Vectors_0.48.1      BiocGenerics_0.56.0  
-    ##  [7] generics_0.1.4        ggseqlogo_0.2.2       universalmotif_1.28.0
-    ## [10] janitor_2.2.1         patchwork_1.3.2       here_1.0.2           
-    ## [13] lubridate_1.9.5       forcats_1.0.1         stringr_1.6.0        
-    ## [16] dplyr_1.2.1           purrr_1.2.2           readr_2.2.0          
-    ## [19] tidyr_1.3.2           tibble_3.3.1          ggplot2_4.0.2        
-    ## [22] tidyverse_2.0.0      
-    ## 
-    ## loaded via a namespace (and not attached):
-    ##  [1] stringi_1.8.7         hms_1.1.4             digest_0.6.39        
-    ##  [4] magrittr_2.0.5        evaluate_1.0.5        grid_4.5.2           
-    ##  [7] timechange_0.4.0      RColorBrewer_1.1-3    fastmap_1.2.0        
-    ## [10] rprojroot_2.1.1       scales_1.4.0          textshaping_1.0.5    
-    ## [13] cli_3.6.6             crayon_1.5.3          rlang_1.2.0          
-    ## [16] withr_3.0.3           yaml_2.3.12           otel_0.2.0           
-    ## [19] tools_4.5.2           tzdb_0.5.0            vctrs_0.7.2          
-    ## [22] R6_2.6.1              matrixStats_1.5.0     lifecycle_1.0.5      
-    ## [25] snakecase_0.11.1      MASS_7.3-65           ragg_1.5.2           
-    ## [28] pkgconfig_2.0.3       pillar_1.11.1         gtable_0.3.6         
-    ## [31] Rcpp_1.1.2            glue_1.8.1            systemfonts_1.3.2    
-    ## [34] xfun_0.57             tidyselect_1.2.1      MatrixGenerics_1.22.0
-    ## [37] rstudioapi_0.19.0     knitr_1.51            dichromat_2.0-0.1    
-    ## [40] farver_2.1.2          htmltools_0.5.9       rmarkdown_2.31       
-    ## [43] compiler_4.5.2        S7_0.2.1
