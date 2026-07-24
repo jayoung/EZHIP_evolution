@@ -256,7 +256,7 @@ p1
 
 ``` r
 ggsave(p1,
-       file=here("motif_analysis/Rscript_output/motifs_star80.pdf"),
+       file=here("motif_analysis/protein_motif_logo_plots_Rscript_output/motifs_star80.pdf"),
        height=12, width=5)
 ```
 
