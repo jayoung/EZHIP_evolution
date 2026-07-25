@@ -1,5 +1,9 @@
 Scripts mentioned below are in the `motif_analysis/other_scripts` directory. 
 
+# Motif search results summary
+
+The R script [protein_motif_database_searches_process_output.Rmd](protein_motif_database_searches_process_output.Rmd) parses the output of all of the searches below. The rendered output of that script is [here](protein_motif_database_searches_process_output.md).
+
 # Genomes and proteomes searched
 
 Two files in the `motif_analysis/meme_protein_motifs/EZHIP_sequences_used_for_MEME_analyses.fa_meme/sequence_database_lists` directory list 12 species' genome/proteome files that we searched with EZHIP protein motifs. 

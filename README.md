@@ -44,7 +44,7 @@ There's a paragraph in the revised manuscript that reads (something like this):
 
 There are no figures/tables associated with this statement - we provide search output here for full transparency.
 
-
+See notes in [protein_motif_database_searches_README.md](motif_analysis/protein_motif_database_searches_README.md).
 
 
 ## Note about R versions and renv
