@@ -8,7 +8,6 @@ file_source_notes*.md
 slurm-*
 *fasta.hmm*
 *fasta
-*_meme
 .vscode
 *Rrender*
 
