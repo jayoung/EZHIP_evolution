@@ -1,0 +1,40 @@
+#!/usr/bin/perl
+
+use warnings;
+use strict;
+use Bio::SeqIO;
+
+### purpose: after I run getorf (EMBOSS) on a genome, I want to 
+# - remove any seqences that are entirely gaps (Xs)
+# - trim down gap size for any sequence with LONG assembly gaps. 
+
+my $minGapToShrink = "XXXXXXXXXXXX";  ## = 12x X
+my $newGapString   = "XXXXXXXXX";     ## = 9x X
+my $minSeqlen = 50; ## minimum seqlength to output
+
+## test:
+# cd /fh/fast/malik_h/grp/public_databases/UCSC/human_Dec2013/zz_6frame_translation$ 
+# head -1000 hg38.getorf.min300.fa > test.fa
+# ~/EZHIP_janet/bin/reduceAssemblyGapSize_getORFoutput.bioperl test.fa 
+
+
+##############
+
+$minGapToShrink  =~ s/X$//i; ### take one X off the end of the gap to shrink, because we add another one in the pattern match later
+
+foreach my $file (@ARGV){
+    if (!-e $file) { die "\n\nterminating - cannot open file $file\n\n"; }
+    my $out = $file; $out =~ s/\.fasta$//; $out =~ s/\.fa//;
+    $out .= ".smallerGaps.min$minSeqlen.fa";
+    my $seqIN = Bio::SeqIO->new(-file => "< $file", '-format' => 'fasta');
+    my $seqOUT = Bio::SeqIO->new(-file => "> $out", '-format' => 'fasta');
+    while (my $seq = $seqIN ->next_seq) {
+        my $letters = $seq->seq(); 
+        $letters =~ s/$minGapToShrink[X]+/$newGapString/ig;
+        if(length($letters) < $minSeqlen) {next;}
+        my $newseqobj = $seq;
+        $newseqobj->seq($letters); 
+        $seqOUT->write_seq($newseqobj);
+   }
+}
+

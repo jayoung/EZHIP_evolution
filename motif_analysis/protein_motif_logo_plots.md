@@ -149,14 +149,6 @@ temp <- lapply(names(all_motif_instances_forFasta), function(x) {
 rm(temp)
 ```
 
-For motif 9 I will also save fasta file for a trimmed version, positions
-3-16 - just the more conserved positions (AVRMRASSPSPPGR)
-
-``` r
-motif9_trimmed <- narrow(all_motif_instances_forFasta[["EZHIP-9"]], start=3, end=16)
-writeXStringSet(motif9_trimmed, filepath = paste0(output_dir, "EZHIP-9-trimmed_3to16.fasta"))
-```
-
 Then, on the linux command line, we make HMMs for each motif as follows:
 
 First we change to the directory where our R script output the instances
@@ -260,7 +252,16 @@ ggsave(p1,
        height=12, width=5)
 ```
 
-# Finished - show package versions used
+# Finished
+
+Save one or two R objects for use in other scripts
+
+``` r
+save(EZHIP_motif_summary,
+     file=here("motif_analysis/protein_motif_logo_plots_Rscript_output/protein_motif_logo_plots_savedRobjects.Rdata"))
+```
+
+Show package versions used
 
 ``` r
 sessionInfo()

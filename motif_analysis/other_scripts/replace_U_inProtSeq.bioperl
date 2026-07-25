@@ -1,0 +1,22 @@
+#!/usr/bin/perl
+
+use warnings;
+use strict;
+use Bio::SeqIO;
+
+## NCBI proteomes - some have U (selenocysteine) which MAST cannot handle. Change U to C (regular cysteine) - not sure that's the right thing to do but it doesn't matter
+
+foreach my $file (@ARGV){
+    if (!-e $file) { die "\n\nterminating - cannot open file $file\n\n"; }
+    my $out = $file; $out =~ s/\.fasta$//; $out =~ s/\.fa$//; $out =~ s/\.faa$//;
+    $out .= ".fixU.fa";
+    my $seqIN = Bio::SeqIO->new(-file => "< $file", '-format' => 'fasta');
+    my $seqOUT = Bio::SeqIO->new(-file => "> $out", '-format' => 'fasta');
+    while (my $seq = $seqIN ->next_seq) {
+        my $letters = $seq->seq(); 
+        $letters =~ s/U/C/gi;
+        $seq->seq($letters); 
+        $seqOUT->write_seq($seq);
+    }
+}
+

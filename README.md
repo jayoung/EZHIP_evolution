@@ -36,6 +36,17 @@ And the R script [`protein_motif_logo_plots.Rmd`](motif_analysis/protein_motif_l
 - determine conservation levels at each motif position 
 - replot motif logo plots using the chosen color scheme, and adding star symbols to residues conserved in >=80% of motif occurrences
 
+## Additional analysis beyond the paper
+
+There's a paragraph in the revised manuscript that reads (something like this):
+
+"We leveraged these motifs to perform more sensitive searches of selected genomes and predicted proteomes, using both Hidden Markov Models and the MAST algorithm (see Methods). We found no convincing homology in species outside of placental mammals, confirming our inferred age of EZHIP. Outside of EZHIP and some recent duplicates we identified using blast searches (see below), we found no evidence for additional in selected placental mammal genomes. We also looked for other genes containing just the KLP motif, and found no clear matches, including in the genomes of Afrotherian species where EZHIP lacks the KLP. The evolutionary origin of EZHIP and the KLP motif therefore remains unclear."
+
+There are no figures/tables associated with this statement - we provide search output here for full transparency.
+
+
+
+
 ## Note about R versions and renv
 
 This repository uses `renv` to control R versions and R package versions. I'm using the Hutch Rstudio server (apptainer version, R 4.5.2). 

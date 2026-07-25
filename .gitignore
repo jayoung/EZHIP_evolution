@@ -10,6 +10,7 @@ slurm-*
 *fasta
 *_meme
 .vscode
+*Rrender*
 
 ###### below is from the .gitignore template
 

@@ -1,0 +1,1097 @@
+---
+title: "protein_motif_database_searches_process_output"
+author: "Janet Young\n"
+date: "`r Sys.Date()`\n"
+output: github_document
+always_allow_html: true
+---
+
+# Goal 
+
+Used protein motifs (output by MEME) to search selected genomes and proteomes - this script parses the output to help sort through the many weak hits we get.  
+
+Search methods:  FIMO, MAST and hmmsearch.
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(here)      # for tracking project home dir location
+library(patchwork) # for showing >1 ggplot together
+library(janitor)   # for clean_names() function 
+library(universalmotif)
+library(ggseqlogo)
+library(Biostrings)
+library(kableExtra)
+library(xml2)       # to parse MAST xml output
+
+source(here("motif_analysis/motif_analysis_functions.R"))
+
+## load objects saved by protein_motif_logo_plots.Rmd
+load(here("motif_analysis/protein_motif_logo_plots_Rscript_output/protein_motif_logo_plots_savedRobjects.Rdata"))
+
+## MEME output base dir:
+meme_dir <- here("motif_analysis/meme_protein_motifs/EZHIP_sequences_used_for_MEME_analyses.fa_meme/")
+```
+
+
+
+# Genomes and proteomes we're searching
+
+
+We search 12 species, two databases for each, comprising three groups:
+
+- `placental_other`: 'positive control' species - placental mammals where we should find EZHIP, including the KLP motif (motif 9)
+- `afrotheria`: four Afrotheria species that seem to have lost KLP in EZHIP
+- `marsupial/monotreme`: four outgroup species where we want to look for remote homologs 
+
+For each species we search: 
+
+- predicted proteomes downloaded from NCBI. Should work better for intron-containing genes, but may be incomplete for some genes
+- 6-frame translations of the whole genome. More complete than the predicted proteome, but not as good for intron-containing genes, and may yield a lot of noise
+
+
+```{r read 12 proteomes info}
+#  Read info on the 12 proteome files:
+selected_12proteomes_info <- here("motif_analysis/meme_protein_motifs/EZHIP_sequences_used_for_MEME_analyses.fa_meme/sequence_database_lists/selected_proteome_files.tsv") |> 
+    read_tsv(show_col_types = FALSE) |> 
+    mutate(genome=sapply(strsplit(output_tag, "_"), "[[", 1)) |> 
+    relocate(genome)
+```
+
+```{r read all 12 proteome files to get seq descriptions}
+selected_12proteomes_seqinfo <-  lapply(1:nrow(selected_12proteomes_info), function(i) {
+    this_genome <- selected_12proteomes_info[i,"genome"] |> deframe()
+    these_seqs <- selected_12proteomes_info[i,"proteome_file"] |> 
+        deframe() |> 
+        read_seq_file_JY(type="AA")
+    these_seqs_info <- these_seqs[["info"]] |> 
+        mutate(genome=this_genome) |> 
+        relocate(genome)
+    return(these_seqs_info)
+}) |> 
+    bind_rows()
+```
+
+
+```{r read 12 genomes information}
+# Read info on the 12 genome-6frame files:
+selected_12genomes6frames_info <- here("motif_analysis/meme_protein_motifs/EZHIP_sequences_used_for_MEME_analyses.fa_meme/sequence_database_lists/selected_genome_6frame_files.tsv") |> 
+    read_tsv(show_col_types = FALSE) |> 
+    mutate(genome=sapply(strsplit(output_tag, "_"), "[[", 1)) |> 
+    relocate(genome)
+```
+
+
+
+Here are the 12 species we searched:
+
+```{r}
+selected_12genomes6frames_info |> 
+    select(common_name, genome, group) |> 
+    left_join(selected_12proteomes_info |> 
+                  select(genome, proteome_file),
+              by="genome") |> 
+    mutate(proteome_file_short = sapply(strsplit(proteome_file, "/"), function(x) {x[length(x)]} )) |> 
+    mutate(proteome_file_short = case_when(
+        proteome_file_short=="protein.faa" ~ sapply(strsplit(proteome_file, "/"), function(x) {
+            paste0(x[length(x)-1], "/", x[length(x)])
+        } ), 
+        TRUE ~ proteome_file_short
+    )) |> 
+    select(species=common_name, genome, species_group=group, proteome=proteome_file_short) |> 
+    rename_with(~ str_replace_all(., "_", " ")) |>
+    kable(format.args = list(big.mark = ","),
+          digits=1) |> 
+    kable_styling(full_width = FALSE)
+```
+
+
+# FIMO search output 
+
+From [MEME suite documentation](https://meme-suite.org/meme/doc/fimo.html) - "FIMO scans a set of sequences for individual matches to each of the motifs you provide"
+
+## FIMO search of 12 selected proteomes
+
+```{r}
+## get filenames 
+fimo_proteome_files <- paste0(meme_dir, "meme.txt.FIMO.vs.selectedProteomes") |> 
+    list.files(pattern="proteome", full.names = TRUE) |> 
+    list.files(pattern="fimo.tsv", full.names = TRUE)
+
+
+names(fimo_proteome_files) <- sapply(strsplit(fimo_proteome_files, "/"), function(x) { x[length(x)-1] })
+names(fimo_proteome_files) <- sapply(strsplit(names(fimo_proteome_files), "\\."), function(x) { x[5] })
+names(fimo_proteome_files) <- gsub("_proteome", "", names(fimo_proteome_files))
+```
+
+
+```{r read fimo proteome search output}
+## read output
+fimo_proteomes <- lapply(names(fimo_proteome_files), function(x) {
+    fimo_proteome_files[[x]] |> 
+        read_tsv(show_col_types = FALSE, comment="#") |> 
+        mutate(proteome = x )
+}) |> 
+    bind_rows() |> 
+    clean_names() |> 
+    relocate(proteome) |> 
+    ## add alternative motif ID
+    left_join(EZHIP_motif_summary |> 
+                  ## add species info
+                  select(EZHIP_motif_id=motif_id, motif_alt_id=orig_name),
+              by="motif_alt_id") |> 
+    relocate(EZHIP_motif_id, .after=motif_alt_id) |> 
+    left_join(selected_12proteomes_info |> 
+                  select(genome, common_name, group),
+              by=c("proteome"="genome")) |> 
+    relocate(common_name, group, .after="proteome") |> 
+    ## add info on the hit
+    left_join(selected_12proteomes_seqinfo |> 
+                  select(sequence_name=seq_id, seq_len, desc),
+              by="sequence_name") |> 
+    relocate(seq_len, desc, .after=sequence_name)
+```
+
+
+FIMO seems to be very lenient - there are many many weak hits for all motifs.
+
+Therefore here we look only at motif 9 (the KLP motif) for FIMO. 
+
+### FIMO motif 9 hits (KLP) in human proteome (top 5)
+
+EZHIP itself is the only hit that looks good (EZHIP2 is not in the annotated proteome)
+
+```{r}
+fimo_proteomes |> 
+    filter(EZHIP_motif_id=="EZHIP-9") |> 
+    filter(proteome=="hg38") |> 
+    slice_head(n=5) |>
+    arrange(p_value) |> 
+    show_fimo_match_alignment()
+```
+
+
+
+### FIMO motif 9 hits (KLP) in Afrotheria proteomes 
+
+Show the best two hits by p-value for each genome - the alignments are unimpressive:
+
+```{r}
+fimo_proteomes |> 
+    filter(EZHIP_motif_id=="EZHIP-9") |> 
+    filter(group=="afrotheria") |> 
+    ### per genome, choose best 2 hits
+    group_by(proteome) |> 
+    arrange(p_value) |> 
+    slice_head(n=2) |>
+    ungroup() |> 
+    show_fimo_match_alignment()
+```
+
+
+
+### FIMO motif 9 hits (KLP) in outgroup proteomes (marsupial/monotreme)
+
+Show the best two hits by p-value for each genome - the alignments are unimpressive:
+
+```{r}
+fimo_proteomes |> 
+    filter(EZHIP_motif_id=="EZHIP-9") |> 
+    filter(group %in% c("marsupial","monotreme")) |> 
+    ### per genome, choose best 2 hits
+    group_by(proteome) |> 
+    arrange(p_value) |> 
+    slice_head(n=2) |>
+    ungroup() |> 
+    show_fimo_match_alignment(include_proteome=TRUE)
+```
+
+
+## FIMO search of 12 selected genome-6frame translations
+
+
+```{r}
+## get filenames 
+fimo_6frame_files <- paste0(meme_dir, "meme.txt.FIMO.vs.selectedGenomes_6frames") |> 
+    list.files(pattern="6frame", full.names = TRUE) |> 
+    list.files(pattern="fimo.tsv", full.names = TRUE)
+
+names(fimo_6frame_files) <- sapply(strsplit(fimo_6frame_files, "/"), function(x) { x[length(x)-1] })
+names(fimo_6frame_files) <- sapply(strsplit(names(fimo_6frame_files), "\\."), function(x) { x[5] })
+names(fimo_6frame_files) <- gsub("_6frame", "", names(fimo_6frame_files))
+```
+
+
+```{r read fimo genome search output}
+## read output
+fimo_6frames <- lapply(names(fimo_6frame_files), function(x) {
+    fimo_6frame_files[[x]] |> 
+        read_tsv(show_col_types = FALSE, comment="#") |> 
+        mutate(genome = x )
+}) |> 
+    bind_rows() |> 
+    clean_names() |> 
+    relocate(genome) |> 
+    ## add alternative motif ID
+    left_join(EZHIP_motif_summary |> 
+                  ## add species info
+                  select(EZHIP_motif_id=motif_id, motif_alt_id=orig_name),
+              by="motif_alt_id") |> 
+    relocate(EZHIP_motif_id, .after=motif_alt_id) |> 
+    left_join(selected_12proteomes_info |> 
+                  select(genome, common_name, group),
+              by="genome") |> 
+    relocate(common_name, group, .after="genome") |> 
+    ## add info on the hit
+    left_join(selected_12proteomes_seqinfo |> 
+                  select(sequence_name=seq_id, seq_len, desc),
+              by="sequence_name") |> 
+    relocate(seq_len, desc, .after=sequence_name)
+```
+
+
+### FIMO motif 9 hits (KLP) in human 6-frame translation (top 5)
+
+Top hit is EZHIP (chrX), second hit is EZHIP2 (chr5), and the rest look unimpressive
+
+```{r}
+fimo_6frames |> 
+    filter(EZHIP_motif_id=="EZHIP-9") |> 
+    filter(genome=="hg38") |> 
+    slice_head(n=5) |>
+    arrange(p_value) |> 
+    show_fimo_match_alignment(include_genome=TRUE, include_description=FALSE)
+```
+
+### FIMO motif 9 hits (KLP) in afrotheria 6-frame translations (top 2 per species)
+
+Show the best two hits by p-value for each genome - they seem unimpressive:
+
+```{r}
+fimo_6frames |> 
+    filter(EZHIP_motif_id=="EZHIP-9") |> 
+    filter(group=="afrotheria") |> 
+    ### per genome, choose best 2 hits
+    group_by(genome) |> 
+    arrange(p_value) |> 
+    slice_head(n=2) |>
+    ungroup() |> 
+    show_fimo_match_alignment(include_genome=TRUE, include_description = FALSE)
+```
+
+### FIMO motif 9 hits (KLP) in marsupials/monotreme 6-frame translations (top 2 per species)
+
+Show the best two hits by p-value for each genome - they seem unimpressive:
+
+```{r}
+fimo_6frames |> 
+    filter(EZHIP_motif_id=="EZHIP-9") |> 
+    filter(group %in% c("marsupial","monotreme")) |> 
+    ### per genome, choose best 2 hits
+    group_by(genome) |> 
+    arrange(p_value) |> 
+    slice_head(n=2) |>
+    ungroup() |> 
+    show_fimo_match_alignment(include_genome=TRUE, include_description = FALSE)
+```
+
+
+
+# MAST search output 
+
+From [MEME suite documentation](https://meme-suite.org/meme/doc/mast.html):  "MAST searches sequences for matches to a set of motifs, and sorts the sequences by the best combined match to all motifs"
+
+## MAST search of 12 selected proteomes
+
+
+```{r}
+## get filenames 
+mast_proteome_files <- paste0(meme_dir, "meme.txt.MAST.vs.selectedProteomes") |> 
+    list.files(pattern="proteome", full.names = TRUE) |> 
+    list.files(pattern="mast.xml", full.names = TRUE)
+
+names(mast_proteome_files) <- sapply(strsplit(mast_proteome_files, "/"), function(x) { x[length(x)-1] })
+names(mast_proteome_files) <- sapply(strsplit(names(mast_proteome_files), "\\."), function(x) { x[5] })
+names(mast_proteome_files) <- gsub("_proteome", "", names(mast_proteome_files))
+```
+
+
+```{r read mast output proteomes}
+## read output - one row per motif (rather than per hit sequence)
+mast_proteomes <- lapply(names(mast_proteome_files), function(x) {
+    mast_proteome_files[[x]] |> 
+        parse_mast_xml() |> 
+        mutate(proteome = x )
+}) |> 
+    bind_rows() |>
+    clean_names() |>
+    relocate(proteome) |>
+    ### add alternative motif ID
+    left_join(EZHIP_motif_summary |>
+                  # add species info
+                  select(ezhip_motif_index=motif_id, orig_name),
+              by="orig_name") |>
+    relocate(ezhip_motif_index, .after=orig_name) |> 
+    ### get motif diag
+    add_EZHIP_motif_diag() |>
+    mutate(motif_diag_ezhip = str_remove_all(motif_diag_ezhip, "EZHIP-")) |> 
+    ### add more genome info
+    left_join(selected_12proteomes_info |>
+                  select(genome, common_name, group),
+              by=c("proteome"="genome")) |>
+    relocate(common_name, group, .after="proteome") |>
+    ### add info on the hit
+    left_join(selected_12proteomes_seqinfo |>
+                  select(sequence_name=seq_id, seq_len, desc),
+              by="sequence_name") |>
+    relocate(seq_len, desc, .after=sequence_name)
+
+# mast_proteomes |> slice_head(n=6)
+```
+
+
+```{r}
+## Get summary level matches - one row per matched sequence, rather than one row per motif
+mast_proteomes_summary_level <- mast_proteomes  |> 
+    select(proteome, common_name, group, sequence_name, sequence_description,
+           target_e_value_orig,
+           target_e_value, 
+           num_motifs, num_diff_motifs, motif_diag_ezhip ) |> 
+    unique() |> 
+    arrange(proteome, target_e_value) 
+```
+
+
+### MAST hits in human proteome (top 2 by target e-value):
+
+To help us understand MAST output and scoring, look at the top 2 hits in the human annotated proteome (proteome doesn't include EZHIP2).  The "motif diag ezhip" column shows all the motifs found in a single target sequence, in order in the sequence (numbered as in Figure 2).
+
+```{r}
+mast_proteomes_summary_level |> 
+    filter(proteome=="hg38") |> 
+    slice_head(n=2) |> 
+    show_mast_hits_summary_level()
+```
+
+Show the actual motif matches for those two hits. Second hit is unimpressive (EZHIP2 is not in the annotated proteome)
+
+```{r}
+mast_proteomes |> 
+    filter(proteome=="hg38") |> 
+    arrange(target_e_value) |> 
+    show_all_mast_motifs_per_target_seq(num_targets = 2)
+```
+
+### MAST hits in marsupial/monotreme proteomes (top 2 by target e-value, regardless of which motifs they contain):
+
+```{r}
+mast_proteomes_summary_level |> 
+    filter(group %in% c("marsupial","monotreme")) |> 
+    group_by(proteome) |> 
+    arrange(target_e_value) |> 
+    slice_head(n=2) |> 
+    ungroup() |> 
+    show_mast_hits_summary_level(include_proteome = TRUE)
+```
+
+
+
+Show best hits in outgroup proteomes, motif level (top 2 per genome by target p-value):
+
+```{r, message=FALSE}
+mast_proteomes |> 
+    filter(group %in% c("marsupial","monotreme")) |> 
+    group_by(proteome) |> 
+    arrange(target_e_value) |> 
+    show_all_mast_motifs_per_target_seq(num_targets = 2)
+```
+
+
+
+
+
+### MAST hits in marsupial/monotreme proteomes (top 2 by target e-value, only hits containing motif 9):
+
+A lot of the best MAST hits don't contain a match to motif 9 (the KLP). Here the top hits if we restrict ourselves to only those that contain a motif 9 match (top 2 per proteome) - they are unimpressive (alignments are below the table):
+
+```{r}
+mast_filt_hits_temp <- mast_proteomes_summary_level |> 
+    filter(group %in% c("marsupial","monotreme")) |> 
+    filter(str_detect(motif_diag_ezhip, "9"))  |> 
+    group_by(proteome) |> 
+    arrange(target_e_value) |> 
+    slice_head(n=2) |> 
+    ungroup() 
+
+mast_filt_hits_temp|> 
+    show_mast_hits_summary_level(include_proteome = TRUE)
+```
+
+
+
+
+Show best hits in outgroup proteomes that contain motif 9, motif level (top 2 per genome by target p-value, only hits containing motif 9):
+
+```{r, message=FALSE}
+mast_proteomes |> 
+    filter(group %in% c("marsupial","monotreme")) |>
+    filter(sequence_name %in% mast_filt_hits_temp$sequence_name) |> 
+    group_by(proteome) |>
+    show_all_mast_motifs_per_target_seq(num_targets = 2)
+```
+
+
+
+## MAST search of 12 selected genome-6frame translations
+
+
+
+```{r}
+## get filenames 
+mast_6frame_files <- paste0(meme_dir, "meme.txt.MAST.vs.selectedGenomes_6frames") |> 
+    list.files(pattern="6frame", full.names = TRUE) |> 
+    list.files(pattern="mast.xml", full.names = TRUE)
+
+names(mast_6frame_files) <- sapply(strsplit(mast_6frame_files, "/"), function(x) { x[length(x)-1] })
+names(mast_6frame_files) <- sapply(strsplit(names(mast_6frame_files), "\\."), function(x) { x[5] })
+names(mast_6frame_files) <- gsub("_6frame", "", names(mast_6frame_files))
+```
+
+
+
+```{r read mast output on 12 genomes 6 frame translations}
+## read output - one row per motif (rather than per hit sequence)
+mast_6frames <- lapply(names(mast_6frame_files), function(x) {
+    mast_6frame_files[[x]] |> 
+        parse_mast_xml() |> 
+        mutate(genome = x)
+}) |> 
+    bind_rows() |>
+    clean_names() |>
+    relocate(genome) |>
+    ### add alternative motif ID
+    left_join(EZHIP_motif_summary |>
+                  # add species info
+                  select(ezhip_motif_index=motif_id, orig_name),
+              by="orig_name") |>
+    relocate(ezhip_motif_index, .after=orig_name) |>
+    ### get motif diag
+    add_EZHIP_motif_diag() |>
+    mutate(motif_diag_ezhip = str_remove_all(motif_diag_ezhip, "EZHIP-")) |>
+    ### add more genome info
+    left_join(selected_12genomes6frames_info |>
+                  select(genome, common_name, group),
+              by="genome") |>
+    relocate(common_name, group, .after="genome") |>
+    ### parse the orf name to get coordinates
+    parse_getorf_seq_description(description_colname = "sequence_description",
+                                 sequence_name_colname = "sequence_name") |>
+    dplyr::rename(target_len_nt=width) |> 
+    mutate(target_len_aa=target_len_nt / 3) |>
+    relocate(sequence_description, chromosome, start, end, target_len_nt,  strand, .after=motif_diag_ezhip)  |>
+    relocate(target_len_aa, .after=sequence_name)
+
+# mast_6frames |> slice_head(n=6)
+```
+
+
+
+```{r}
+## Get summary level matches - one row per matched sequence, rather than one row per motif
+mast_6frames_summary_level <- mast_6frames  |> 
+    select(genome, common_name, group, sequence_name, sequence_description,
+           target_e_value_orig,
+           target_e_value, 
+           num_motifs, num_diff_motifs, motif_diag_ezhip,
+           chromosome, start, end, strand) |> 
+    unique() |> 
+    arrange(genome, target_e_value) 
+```
+
+
+
+### MAST hits in human hg38 6-frame translations (top 5 by target e-value):
+
+```{r}
+mast_hits_temp <- mast_6frames_summary_level |> 
+    filter(genome=="hg38") |> 
+    slice_head(n=5)
+mast_hits_temp |> 
+    show_mast_hits_summary_level(include_description=FALSE,
+                                 extra_cols=c("chromosome","start","end","strand"))
+```
+
+
+Show the actual motif matches for those five hits - alignments for hits beyond EZHIP and the two chr5 ORFs containing each end of EZHIP2 look unimpressive
+
+```{r}
+mast_6frames |> 
+    filter(sequence_name %in% mast_hits_temp$sequence_name) |> 
+    arrange(target_e_value) |> 
+    show_all_mast_motifs_per_target_seq(#num_targets = 5,
+        include_description=FALSE, 
+        show_target_orf_coords=TRUE)
+```
+
+
+### MAST hits in marsupial/monotreme 6-frame translations (top 2 per genome by target e-value):
+
+Note that these all involve only the repetitive motifs 5 and 6:
+
+```{r, message=FALSE}
+mast_temp_outgroup_hits <- mast_6frames_summary_level |> 
+    filter(group %in% c("marsupial","monotreme")) |> 
+    group_by(genome) |> 
+    arrange(target_e_value) |> 
+    slice_head(n=2) |> 
+    ungroup() 
+mast_temp_outgroup_hits |> 
+    show_mast_hits_summary_level(include_description=FALSE,
+                                 include_genome=TRUE,
+                                 extra_cols=c("chromosome","start","end","strand"))
+```
+
+
+
+Show the actual motif matches for those hits:
+
+```{r}
+mast_6frames |> 
+    filter(sequence_name %in% mast_temp_outgroup_hits$sequence_name) |> 
+    arrange(genome, target_e_value) |> 
+    # group_by(genome) |> 
+    # arrange(target_e_value) |> 
+    # ungroup() |> 
+    show_all_mast_motifs_per_target_seq(include_genome=TRUE,
+                                        include_description=FALSE,
+                                        show_target_orf_coords=TRUE)
+```
+
+
+
+
+### MAST hits in marsupial/monotreme 6-frame translations that contain motif 9 (top 2 per genome by target e-value):
+
+We'd be more impressed by a hit if it contained something that looks like motif 9, so filter to only show those. Here the motif 9 matches are weak, and matches to the repetitive motifs 5 and 6 bump up the MAST score.
+
+```{r, message=FALSE}
+mast_temp_outgroup_hits <- mast_6frames_summary_level |> 
+    filter(group %in% c("marsupial","monotreme")) |> 
+    filter(str_detect(motif_diag_ezhip, "9")) |> 
+    group_by(genome) |> 
+    arrange(target_e_value) |> 
+    slice_head(n=2) |> 
+    ungroup() 
+mast_temp_outgroup_hits |> 
+    show_mast_hits_summary_level(include_description=FALSE,
+                                 include_genome=TRUE,
+                                 extra_cols=c("chromosome","start","end","strand"))
+```
+
+
+
+Show the actual motif matches for those hits:
+
+```{r}
+mast_6frames |> 
+    filter(sequence_name %in% mast_temp_outgroup_hits$sequence_name) |> 
+    arrange(genome, target_e_value) |> 
+    show_all_mast_motifs_per_target_seq(include_genome=TRUE,
+                                        include_description=FALSE,
+                                        show_target_orf_coords=TRUE)
+```
+
+
+
+# hmmsearch output
+
+
+### hmmsearch of 12 selected proteomes
+
+
+```{r read hmmsearch output 12 proteomes}
+# orig motifs (includes trimmed version of motif 9)
+meme_hmmsearch_12proteomes <- paste0(meme_dir, "motifs_hmmsearch_proteomes_max/") |>
+    list.files(pattern="_proteome.domtblout.txt") |> 
+    lapply(function(x) {
+        if (grepl("all_ten_motifs", x)[1]) {
+            this_genome <- gsub("_proteome","",strsplit(x, "\\.")[[1]][5])
+        }
+        if (grepl("trimmed", x)[1]) {
+            this_genome <- gsub("_proteome","",strsplit(x, "\\.")[[1]][6])
+        }
+        if(!exists ("this_genome")) {
+            stop("\n\nERROR - couldn't figure out how to get genome tag from filename\n\n")
+        }
+        # return(this_genome)
+        # cat("reading file ",x,"\n")
+        output <- paste0(meme_dir, "motifs_hmmsearch_proteomes_max/", x) |>
+            readHmmerDomtbl(get_descriptions=TRUE) 
+        if(is.null(output)) {return(NULL)}
+        output <- output |>
+            mutate(genome=this_genome) |>
+            relocate(genome) 
+        ### for the trimmed motif 9 we don't add ezhip_motif_index but for the rest we do
+        if( grepl("trimmed",x)[1] ) {
+            # cat ("   trimmed file!!\n")
+            output <- output |> 
+                mutate(ezhip_motif_index=NA_integer_)
+        } else {
+            output <- output |> 
+                mutate(ezhip_motif_index =  as.integer(str_remove_all(query_name, "EZHIP-")))
+        }
+        return(output)
+    }) |> 
+    bind_rows()|> 
+    left_join(selected_12proteomes_seqinfo |> 
+                  select(seq_id, desc),
+              by=c("target_name"="seq_id")) |>
+    ## add common name and group
+    left_join(selected_12proteomes_info |>
+                  select(genome, common_name, group),
+              by="genome") |>
+    relocate(group, common_name) |> 
+    ## rename a column
+    dplyr::rename(target_len_aa = target_len)
+
+
+
+# table(meme_hmmsearch_12proteomes$target_name %in% selected_12proteomes_seqinfo$seq_id)
+#  TRUE 
+# 2489
+
+meme_hmmsearch_12proteomes_filt <- meme_hmmsearch_12proteomes  |>
+    filter(domain_score >= 10)
+# dim(meme_hmmsearch_12proteomes)
+# [1] 2489   25
+# dim(meme_hmmsearch_12proteomes_filt)
+# [1] 203  25
+```
+
+
+```{r}
+## hmmsearch default inclusion threshold is target_eval<= 0.01
+meme_hmmsearch_12proteomes_filtInclusion <- meme_hmmsearch_12proteomes |> 
+    ## page 140 of the HMM user guide says this should be how I can pick out things abnove inclusion threshold
+    filter(target_eval <= 0.01 & domain_condEval <= 0.01)
+```
+
+
+```{r}
+#### summary level for proteome
+meme_hmmsearch_12proteomes_filt_summarized <- meme_hmmsearch_12proteomes_filt |> 
+    # (for this I don't want to include trimmed version of motif 9)
+    filter(str_detect(query_name, "trimmed", negate=TRUE)) |>
+    ## collapse
+    summarise_hmmsearch_results_each_ORF(include_coords_columns=FALSE) |> 
+    ### add target seq description
+    left_join(selected_12proteomes_seqinfo |>
+                  select(target_name=seq_id, desc),
+              by="target_name") |> 
+    left_join(selected_12proteomes_info |>
+                  select(genome, common_name, group),
+              by="genome") 
+
+# dim(meme_hmmsearch_12proteomes_filt_summarized)
+# [1] 80 14
+```
+
+
+
+
+#### hmmsearch of 12 selected proteomes - use inclusion threshold filter
+
+
+How many seqs in the proteome passed inclusion threshold per species? We'd expect to find EZHIP in horse (equCab3) but we don't - it's most likely just missing from the annotated proteome.
+
+
+```{r}
+meme_hmmsearch_12proteomes_filtInclusion |> 
+    select(genome, target_name) |> 
+    unique() |> 
+    mutate(genome=factor(genome, levels=selected_12genomes6frames_info$genome)) |> 
+    count(genome, .drop=FALSE) |> 
+    arrange(desc(n)) |> 
+    dplyr::rename(num_proteome_hits=n) |> 
+    left_join(selected_12proteomes_info |> 
+                  select(genome, common_name, group),
+              by="genome") |> 
+    relocate(num_proteome_hits) |> 
+    rename_with(~ str_replace_all(., "_", " ")) |>
+    kable() |> 
+    kable_styling(full_width = FALSE)
+```
+
+Show accessions and descriptions for all hits that pass HMMER's inclusion threshold. The two hits in mouse (mm39) are just two splice isoforms of EZHIP
+
+```{r}
+meme_hmmsearch_12proteomes_filtInclusion |> 
+    # filter(genome=="hg38") |>
+    select(common_name, genome, target_name, description) |> 
+    unique() |> 
+    rename_with(~ str_replace_all(., "_", " ")) |>
+    kable() |> 
+    kable_styling(full_width = FALSE)
+```
+
+The only hit that's not already annotated as EZHIP is in platypus - the hit comprises two EZHIP-5 domain matches in one proline-rich sequence "basic salivary proline-rich protein 3-like". Show the hmmer scores here. We also use the target name (XP_007669498.2) to look at the match alignments in the [hmmsearch.txt output file](meme_protein_motifs/EZHIP_sequences_used_for_MEME_analyses.fa_meme/motifs_hmmsearch_proteomes_max/all_ten_motifs.hmm.hmmsearch.VS.mOrnAna1_6frame.txt) - they look unconvincing.
+
+```{r}
+meme_hmmsearch_12proteomes_filtInclusion |> 
+    filter(genome=="mOrnAna1") |>
+    arrange(query_name) |> 
+    relocate(query_name, description) |> 
+    select(-group, -common_name, -genome) |> 
+    rename_with(~ str_replace_all(., "_", " ")) |>
+    kable() |> 
+    kable_styling(full_width = FALSE)
+# filter(query_name=="EZHIP-8")
+```
+
+
+
+#### hmmsearch of 12 selected proteomes - without inclusion threshold filter
+
+##### just human 
+
+Just human - individual domain level. Show top 25 domain matches - domain scores drop off very quickly after the true EZHIP match.
+
+```{r}
+meme_hmmsearch_12proteomes |> 
+    arrange(desc(domain_score)) |> 
+    filter(genome=="hg38") |> 
+    filter(str_detect(query_name, "trimmed", negate = TRUE)) |> 
+    slice_head(n=25) |> 
+    show_hmmsearch_hit_table(include_description=TRUE, 
+                             include_genome=FALSE)
+```
+
+
+
+Now look at matches summarized by the target sequence (>1 motif match per target). I use a domain score threshold of >= 10. Sorting matches by total target domain score, showing top 2.  Second hit after EZHIP is not good.
+
+```{r}
+meme_hmmsearch_12proteomes_filt_summarized |> 
+    filter(genome=="hg38") |> 
+    arrange(desc(total_target_score)) |> 
+    slice_head(n=2) |> 
+    show_hmmsearch_summary_table(include_coords = FALSE,
+                                 include_description=TRUE)
+```
+
+
+
+##### afrotheria
+
+Afrotheria - not showing individual domain level hits for all domains, because we do have tblastn hits, and we're not asking about additional hits to anything other than motif 9 (see above for that)
+
+Show matches summarized by the target sequence (>1 motif match per target), using a domain score threshold of >= 10. Sorting matches by total target domain score, showing top 2 for each species
+
+mEleMax1 (Asiatic elephant) is the only genome for which EZHIP is present in the annotated proteome - that is a hit here but doesn't contain motif 9, as we know. 
+
+The other genomes don't seem to have EZHIP annotated, and the only hits are weak, containing just one motif (see 'motif diag ezhip' column).
+
+```{r}
+meme_hmmsearch_12proteomes_filt_summarized |> 
+    filter(group=="afrotheria") |> 
+    group_by(genome) |> 
+    arrange(desc(total_target_score)) |> 
+    slice_head(n=2) |>
+    ungroup() |> 
+    show_hmmsearch_summary_table(include_coords = FALSE,
+                                 include_description=TRUE)
+```
+
+
+
+##### marsupials/monotremes
+
+Individual domain level. Show top 5 domain matches per species. We can use the 'target name' column to look up individual hits in the `*_proteome.txt` output files in [this folder](meme_protein_motifs/EZHIP_sequences_used_for_MEME_analyses.fa_meme/motifs_hmmsearch_proteomes_max) - these hits look unimpressive.
+
+```{r}
+meme_hmmsearch_12proteomes |> 
+    filter(group %in% c("marsupial", "monotreme")) |> 
+    filter(str_detect(query_name, "trimmed", negate = TRUE)) |> 
+    group_by(genome) |> 
+    arrange(desc(domain_score)) |> 
+    slice_head(n=5) |> 
+    ungroup() |> 
+    show_hmmsearch_hit_table(include_description=TRUE, 
+                             include_genome=FALSE)
+```
+
+
+
+Now look at matches summarized by the target sequence (>1 motif match per target). I use a domain score threshold of >= 10. Sorting matches by total target domain score, showing top 2 per species. Unimpressive.
+
+
+```{r}
+meme_hmmsearch_12proteomes_filt_summarized |> 
+    filter(group %in% c("marsupial", "monotreme")) |> 
+    group_by(genome) |> 
+    arrange(desc(total_target_score)) |> 
+    slice_head(n=2) |>
+    ungroup() |> 
+    show_hmmsearch_summary_table(include_coords = FALSE,
+                                 include_description=TRUE)
+```
+
+
+
+
+### hmmsearch of 12 selected 6-frame translations
+
+#### hmmsearch each motif - any species, using inclusion threshold
+
+
+```{r read hmmsearch output 12 genomes 6frame}
+# `meme_hmmsearch_12genomes_6frame` contains all matches found by hmmsearch (--max setting)
+# `meme_hmmsearch_12genomes_6frame_filt` contains matches with domain score >=10
+
+# orig motifs (includes trimmed version of motif 9)
+meme_hmmsearch_12genomes_6frame <- paste0(meme_dir, "motifs_hmmsearch_genomes_max/") |>
+    list.files(pattern="6frame.domtblout.txt") |> 
+    lapply(function(x) {
+        if (grepl("all_ten_motifs", x)[1]) {
+            this_genome <- gsub("_6frame","",strsplit(x, "\\.")[[1]][5])
+        }
+        if (grepl("trimmed", x)[1]) {
+            this_genome <- gsub("_6frame","",strsplit(x, "\\.")[[1]][6])
+        }
+        if(!exists ("this_genome")) {
+            stop("\n\nERROR - couldn't figure out how to get genome tag from filename\n\n")
+        }
+        # cat("reading file ",x,"\n")
+        output <- paste0(meme_dir, "motifs_hmmsearch_genomes_max/", x) |>
+            readHmmerDomtbl(get_descriptions=TRUE) 
+        if(is.null(output)) {return(NULL)}
+        output <- output |>
+            mutate(genome=this_genome) |>
+            relocate(genome) 
+        ### for the trimmed motif 9 we don't add ezhip_motif_index but for the rest we do
+        if( grepl("trimmed",x)[1] ) {
+            # cat ("   trimmed file!!\n")
+            output <- output |> 
+                mutate(ezhip_motif_index=NA_integer_)
+        } else {
+            output <- output |> 
+                mutate(ezhip_motif_index =  as.integer(str_remove_all(query_name, "EZHIP-")))
+        }
+        
+        output <- output |>
+            parse_getorf_seq_description(description_colname = "description",
+                                         sequence_name_colname = "target_name") |>
+            dplyr::rename(target_len_aa=target_len) |>
+            dplyr::rename(target_len_nt=width)
+        return(output)
+    }) |> 
+    bind_rows() |> 
+    left_join(selected_12genomes6frames_info |> 
+                  select(genome, common_name, group), 
+              by="genome") |> 
+    relocate(group, common_name)
+# meme_hmmsearch_12genomes_6frame
+meme_hmmsearch_12genomes_6frame_filt <- meme_hmmsearch_12genomes_6frame  |>
+    filter(domain_score >= 10)
+# meme_hmmsearch_12genomes_6frame_filt
+```
+
+
+```{r}
+## hmmsearch default inclusion threshold is target_eval<= 0.01
+meme_hmmsearch_12genomes_6frame_filtInclusion <- meme_hmmsearch_12genomes_6frame |> 
+    ## page 140 of the HMM user guide says this should be how I can pick out things abnove inclusion threshold
+    filter(target_eval <= 0.01 & domain_condEval <= 0.01)
+```
+
+```{r}
+# meme_hmmsearch_12genomes_6frame_filtInclusion |> 
+#     filter(genome=="loxAfr3") |>
+#     arrange(query_name) |> 
+#     relocate(query_name) |> 
+#     select(-group, -common_name, -genome, -chromosome, -start, -end, -strand)
+# filter(query_name=="EZHIP-8")
+```
+
+
+#### hmmsearch - motif 9 hits 
+
+##### hmmsearch - motif 9 hits in human
+
+Human - requiring domain score >=10 we find a bunch of hits. Here I show the top 4. Notes on each:
+
+- (1) EZHIP 
+- (2) EZHIP2
+- (3) a 134aa ORF called chr14_16745 with poor e-value (0.67). The motif 9 match is `ASSPSPPGR` (pos 8-16 of motif 9) - seems unimpressive
+- (4) a 156aa ORF called chr10_107312 with poor e-value (1.1)
+
+These hits are filtered on domain score >=10 - without that filter, there are a lot of even more unimpressive hits (e.g. a match to just `SSPSP` with domain score -1.5). This is a very sensitive search (too sensitive).
+
+```{r}
+meme_hmmsearch_12genomes_6frame |> 
+    filter(genome=="hg38" & query_name=="EZHIP-9") |> 
+    filter(domain_score >= 10) |>
+    slice_head(n=4) |>
+    show_hmmsearch_hit_table()
+```
+
+Show matches to motif 9 that pass HMMER's "inclusion threshold" - only EZHIP and EZHIP2 pass that threshold:
+
+```{r}
+meme_hmmsearch_12genomes_6frame_filtInclusion |> 
+    filter(genome=="hg38" & query_name=="EZHIP-9") |> 
+    show_hmmsearch_hit_table()
+```
+
+##### hmmsearch - motif 9 hits in afrotheria
+
+Show best motif 9 matches in each of the four afrotheria genomes - best single motif 9 match in each genome (by target_eval). 
+
+I show matches in tabular format here. I use the target name column to search the plain text hmmsearch.txt output file (e.g. [`all_ten_motifs.hmm.hmmsearch.VS.TriManLat1_6frame.txt`](meme_protein_motifs/EZHIP_sequences_used_for_MEME_analyses.fa_meme/motifs_hmmsearch_genomes_max/all_ten_motifs.hmm.hmmsearch.VS.TriManLat1_6frame.txt)) to look at the alignments between motif and target sequence. I have not written code to extract those alignments and display them here.
+
+Here are the best motif 9 matches in those four afrotherian genomes - none have 'VRMR'.
+
+The manatee (TriManLat1) match is the only one that passes HMMER's inclusion threshold. The rest have high e-values (>=0.29)
+
+```
+mEleMax1 - best motif9 hit is          SPSPPGELFPL
+loxAfr3 - best motif9 hit is         ASSPSPPGLMFL
+TriManLat1 - best motif9 hit is ATRHRASSPSPPG
+mDugDug1 - best motif9 hit is          SPSPPGRLYLL
+```
+
+```{r}
+meme_hmmsearch_12genomes_6frame |> 
+    filter(group=="afrotheria" & query_name=="EZHIP-9") |> 
+    # filter(domain_score >= 10)  |> 
+    ## get best hit in each genome
+    group_by(genome) |> 
+    arrange(target_eval) |> 
+    slice_head(n=1) |> 
+    ungroup() |> 
+    show_hmmsearch_hit_table()
+# filter(target_eval < 0.1)
+```
+
+
+##### hmmsearch - motif 9 hits in marsupial/monotreme
+
+Show best motif 9 match in each of the four marsupial/monotreme outgroup species genomes - when I look at the alignments none have 'VRMR'.
+
+```
+mMacEug1 - best motif9 hit is  PMQASSPSPPPSFFFFF
+mMonDom1 - best motif9 hit is    RNSSPSPPRRHFVF
+mSarHar1 - best motif9 hit is    RASSPAPPGKLFP
+mOrnAna1 - best motif9 hit is   MRCSSPS
+```
+
+```{r}
+meme_hmmsearch_12genomes_6frame |> 
+    filter(group=="marsupial" | group=="monotreme") |> 
+    filter(query_name=="EZHIP-9") |> 
+    ## get best hit in each genome
+    group_by(genome) |> 
+    arrange(target_eval) |> 
+    slice_head(n=1) |> 
+    ungroup() |> 
+    show_hmmsearch_hit_table()
+```
+
+
+#### hmmsearch all motifs combined - summarize matches per target ORF 
+
+
+```{r}
+#### summary level with for 6-frame translations
+meme_hmmsearch_12genomes_6frame_filt_summarized <- meme_hmmsearch_12genomes_6frame_filt |> 
+    # (for this I don't want to include trimmed version of motif 9)
+    filter(str_detect(query_name, "trimmed", negate=TRUE)) |> 
+    summarise_hmmsearch_results_each_ORF() |> 
+    left_join(selected_12genomes6frames_info |> 
+                  select(genome, common_name, group), 
+              by="genome") |> 
+    relocate(group, common_name)
+
+# dim(meme_hmmsearch_12genomes_6frame_filt_summarized)
+# [1] 3381   18
+```
+
+##### hmmsearch all motifs combined - human
+
+I'll use human to figure out some reasonable filtering strategies at the level of summarized hits.
+
+A reasonable filtering strategy seems to be: 
+
+- ignore hits that only have the repetitive motifs 5/6/7 and no others
+- require at least one motif with e-value < 0.1
+- require at least 20aa worth of sequence aligned to any motif
+
+Check that strategy in human - that gets me the ONLY 3 human regions we know about (chrX, plus the two very nearby bit on opposite strands on chr5).  The next-best thing after that was chr20_39436 - has two matches to motif 4 (total aln length = 24aa). When I look at the hit it's unimpressive.
+
+```{r}
+hmmsearch_filter_summarized_output <- function(x) {
+    x |> 
+        select(-group, -common_name) |> 
+        ### sort by total target score
+        arrange(desc(total_target_score)) |> 
+        ### ignore hits that only have the repetitive motifs
+        filter(motifs_present != "5") |> 
+        filter(motifs_present != "6") |> 
+        filter(motifs_present != "7") |> 
+        # pairs
+        filter(motifs_present != "5,6") |>
+        filter(motifs_present != "5,7") |>
+        filter(motifs_present != "6,7") |>
+        # all three
+        filter(motifs_present != "5,6,7") |>
+        # need at least one motif with e-value < 0.1
+        filter(best_target_eval < 0.1) |>
+        ## need at least 20aa worth of sequence aligned to any motif
+        filter(total_ali_width >= 20)   
+}
+```
+
+
+```{r}
+meme_hmmsearch_12genomes_6frame_filt_summarized |> 
+    filter(genome=="hg38") |> 
+    hmmsearch_filter_summarized_output() |> 
+    # select(-genome) |> 
+    show_hmmsearch_summary_table(include_genome=FALSE)
+```
+
+##### hmmsearch all motifs combined - Afrotheria
+
+We're not checking Afrotherian genomes with motifs other than the KLP (motif 9) - we HAVE found an EZHIP gene or pseudogene in these species. The question we want to ask in these species is whether they have a KLP motif in any other gene.
+
+
+```{r}
+# meme_hmmsearch_12genomes_6frame_filt_summarized |> 
+#     filter(group == "afrotheria") |> 
+#     hmmsearch_filter_summarized_output() |> 
+#     arrange(genome) |> 
+#     show_hmmsearch_summary_table()
+```
+
+
+##### hmmsearch all motifs combined - marsupials/monotreme
+
+Check matches in outgroup genomes (marsupials and monotreme) using the same filtering strategy - these are not convincing
+
+
+```{r}
+meme_hmmsearch_12genomes_6frame_filt_summarized |> 
+    filter(group %in% c("marsupial", "monotreme")) |> 
+    hmmsearch_filter_summarized_output() |> 
+    show_hmmsearch_summary_table(include_genome=TRUE,
+                                 include_coords=FALSE)
+```
+
+
+
+# Finished
+
+```{r}
+sessionInfo()
+```
