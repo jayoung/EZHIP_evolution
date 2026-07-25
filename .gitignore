@@ -11,6 +11,8 @@ slurm-*
 .vscode
 *Rrender*
 
+*_Rscript_output
+EZHIP_sequences_used_for_MEME_analyses.fa_meme
 
 ## large files produced by FIMO that I don't need to sync. I only use the fimo.tsv output in the R script
 cisml.xml
