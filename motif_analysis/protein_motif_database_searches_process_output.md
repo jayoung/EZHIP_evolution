@@ -2,7 +2,7 @@ protein_motif_database_searches_process_output
 ================
 Janet Young
 
-2026-07-24
+2026-07-27
 
 # Goal
 
@@ -11,6 +11,9 @@ proteomes - this script parses the output to help sort through the many
 weak hits we get.
 
 Search methods: FIMO, MAST and hmmsearch.
+
+Raw search output can be downloaded from Zenodo at
+<https://doi.org/10.5281/zenodo.21629929>
 
 # Genomes and proteomes we’re searching
 
@@ -3908,10 +3911,11 @@ basic salivary proline-rich protein 3-like \[Ornithorhynchus anatinus\]
 
 The only hit that’s not already annotated as EZHIP is in platypus - the
 hit comprises two EZHIP-5 domain matches in one proline-rich sequence
-“basic salivary proline-rich protein 3-like”. Show the hmmer scores
-here. We also use the target name (XP_007669498.2) to look at the match
-alignments in the [hmmsearch.txt output
-file](meme_protein_motifs/EZHIP_sequences_used_for_MEME_analyses.fa_meme/motifs_hmmsearch_proteomes_max/all_ten_motifs.hmm.hmmsearch.VS.mOrnAna1_6frame.txt) -
+“basic salivary proline-rich protein 3-like”. We show the hmmer scores
+here, and can also use the target name (e.g. `XP_007669498.2`) to look
+at the match alignments in the hmmsearch.txt output file (Zenodo
+download, file
+`motifs_hmmsearch_proteomes_max/all_ten_motifs.hmm.hmmsearch.VS.mOrnAna1_6frame.txt`) -
 they look unconvincing.
 
 <table class="table" style="width: auto !important; margin-left: auto; margin-right: auto;">
@@ -8272,10 +8276,10 @@ Show best motif 9 matches in each of the four afrotheria genomes - best
 single motif 9 match in each genome (by target_eval).
 
 I show matches in tabular format here. I use the target name column to
-search the plain text hmmsearch.txt output file
-(e.g. [`all_ten_motifs.hmm.hmmsearch.VS.TriManLat1_6frame.txt`](meme_protein_motifs/EZHIP_sequences_used_for_MEME_analyses.fa_meme/motifs_hmmsearch_genomes_max/all_ten_motifs.hmm.hmmsearch.VS.TriManLat1_6frame.txt))
-to look at the alignments between motif and target sequence. I have not
-written code to extract those alignments and display them here.
+search the plain text hmmsearch.txt output file (Zenodo download, files
+in `motifs_hmmsearch_genomes_max` whose name ends `_6frame.txt`) to look
+at the alignments between motif and target sequence. I have not written
+code to extract those alignments and display them here.
 
 Here are the best motif 9 matches in those four afrotherian genomes -
 none have ‘VRMR’.
@@ -9342,30 +9346,30 @@ NC_045431.1_166099
     ## [8] base     
     ## 
     ## other attached packages:
-    ##  [1] xml2_1.4.1            kableExtra_1.4.0      Biostrings_2.78.0    
+    ##  [1] xml2_1.6.0            kableExtra_1.4.0      Biostrings_2.78.0    
     ##  [4] Seqinfo_1.0.0         XVector_0.50.0        IRanges_2.44.0       
     ##  [7] S4Vectors_0.48.1      BiocGenerics_0.56.0   generics_0.1.4       
     ## [10] ggseqlogo_0.2.2       universalmotif_1.28.0 janitor_2.2.1        
     ## [13] patchwork_1.3.2       here_1.0.2            lubridate_1.9.5      
-    ## [16] forcats_1.0.1         stringr_1.5.2         dplyr_1.2.1          
-    ## [19] purrr_1.1.0           readr_2.2.0           tidyr_1.3.2          
+    ## [16] forcats_1.0.1         stringr_1.6.0         dplyr_1.2.1          
+    ## [19] purrr_1.2.2           readr_2.2.0           tidyr_1.3.2          
     ## [22] tibble_3.3.1          ggplot2_4.0.2         tidyverse_2.0.0      
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] gtable_0.3.6          xfun_0.54             tzdb_0.5.0           
+    ##  [1] gtable_0.3.6          xfun_0.57             tzdb_0.5.0           
     ##  [4] vctrs_0.7.2           tools_4.5.2           parallel_4.5.2       
     ##  [7] pkgconfig_2.0.3       RColorBrewer_1.1-3    S7_0.2.1             
     ## [10] lifecycle_1.0.5       compiler_4.5.2        farver_2.1.2         
-    ## [13] textshaping_1.0.4     snakecase_0.11.1      htmltools_0.5.8.1    
-    ## [16] yaml_2.3.10           pillar_1.11.1         crayon_1.5.3         
-    ## [19] MASS_7.3-65           tidyselect_1.2.1      digest_0.6.37        
+    ## [13] textshaping_1.0.5     snakecase_0.11.1      htmltools_0.5.9      
+    ## [16] yaml_2.3.12           pillar_1.11.1         crayon_1.5.3         
+    ## [19] MASS_7.3-65           tidyselect_1.2.1      digest_0.6.39        
     ## [22] stringi_1.8.7         rprojroot_2.1.1       fastmap_1.2.0        
-    ## [25] grid_4.5.2            cli_3.6.5             magrittr_2.0.4       
-    ## [28] dichromat_2.0-0.1     withr_3.0.2           scales_1.4.0         
-    ## [31] bit64_4.6.0-1         timechange_0.4.0      rmarkdown_2.30       
-    ## [34] matrixStats_1.5.0     bit_4.6.0             ragg_1.5.0           
-    ## [37] hms_1.1.4             evaluate_1.0.5        knitr_1.50           
-    ## [40] viridisLite_0.4.3     rlang_1.2.0           Rcpp_1.1.0           
-    ## [43] glue_1.8.0            vroom_1.7.1           svglite_2.2.2        
-    ## [46] rstudioapi_0.17.1     R6_2.6.1              MatrixGenerics_1.22.0
-    ## [49] systemfonts_1.3.1
+    ## [25] grid_4.5.2            cli_3.6.6             magrittr_2.0.5       
+    ## [28] dichromat_2.0-0.1     withr_3.0.3           scales_1.4.0         
+    ## [31] bit64_4.6.0-1         timechange_0.4.0      rmarkdown_2.31       
+    ## [34] matrixStats_1.5.0     bit_4.6.0             otel_0.2.0           
+    ## [37] ragg_1.5.2            hms_1.1.4             evaluate_1.0.5       
+    ## [40] knitr_1.51            viridisLite_0.4.3     rlang_1.2.0          
+    ## [43] Rcpp_1.1.2            glue_1.8.1            vroom_1.7.1          
+    ## [46] svglite_2.2.2         rstudioapi_0.19.0     R6_2.6.1             
+    ## [49] MatrixGenerics_1.22.0 systemfonts_1.3.2

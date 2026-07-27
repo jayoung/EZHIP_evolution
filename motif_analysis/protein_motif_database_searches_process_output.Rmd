@@ -12,6 +12,7 @@ Used protein motifs (output by MEME) to search selected genomes and proteomes - 
 
 Search methods:  FIMO, MAST and hmmsearch.
 
+Raw search output can be downloaded from Zenodo at https://doi.org/10.5281/zenodo.21629929 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
@@ -735,7 +736,7 @@ meme_hmmsearch_12proteomes_filtInclusion |>
     kable_styling(full_width = FALSE)
 ```
 
-The only hit that's not already annotated as EZHIP is in platypus - the hit comprises two EZHIP-5 domain matches in one proline-rich sequence "basic salivary proline-rich protein 3-like". Show the hmmer scores here. We also use the target name (XP_007669498.2) to look at the match alignments in the [hmmsearch.txt output file](meme_protein_motifs/EZHIP_sequences_used_for_MEME_analyses.fa_meme/motifs_hmmsearch_proteomes_max/all_ten_motifs.hmm.hmmsearch.VS.mOrnAna1_6frame.txt) - they look unconvincing.
+The only hit that's not already annotated as EZHIP is in platypus - the hit comprises two EZHIP-5 domain matches in one proline-rich sequence "basic salivary proline-rich protein 3-like". We show the hmmer scores here, and can also use the target name (e.g. `XP_007669498.2`) to look at the match alignments in the hmmsearch.txt output file (Zenodo download, file  `motifs_hmmsearch_proteomes_max/all_ten_motifs.hmm.hmmsearch.VS.mOrnAna1_6frame.txt`) - they look unconvincing.
 
 ```{r}
 meme_hmmsearch_12proteomes_filtInclusion |> 
@@ -948,7 +949,7 @@ meme_hmmsearch_12genomes_6frame_filtInclusion |>
 
 Show best motif 9 matches in each of the four afrotheria genomes - best single motif 9 match in each genome (by target_eval). 
 
-I show matches in tabular format here. I use the target name column to search the plain text hmmsearch.txt output file (e.g. [`all_ten_motifs.hmm.hmmsearch.VS.TriManLat1_6frame.txt`](meme_protein_motifs/EZHIP_sequences_used_for_MEME_analyses.fa_meme/motifs_hmmsearch_genomes_max/all_ten_motifs.hmm.hmmsearch.VS.TriManLat1_6frame.txt)) to look at the alignments between motif and target sequence. I have not written code to extract those alignments and display them here.
+I show matches in tabular format here. I use the target name column to search the plain text hmmsearch.txt output file (Zenodo download, files in `motifs_hmmsearch_genomes_max` whose name ends `_6frame.txt`) to look at the alignments between motif and target sequence. I have not written code to extract those alignments and display them here.
 
 Here are the best motif 9 matches in those four afrotherian genomes - none have 'VRMR'.
 
