@@ -44,7 +44,9 @@ There's a paragraph in the revised manuscript that reads (something like this):
 
 There are no figures/tables associated with this statement - we provide search output here for full transparency.
 
-See notes in [protein_motif_database_searches_README.md](motif_analysis/protein_motif_database_searches_README.md).
+The motif search output files can be downloaded from [Zenodo](https://doi.org/10.5281/zenodo.21629929), and the [R script output](protein_motif_database_searches_process_output.md) shows details of the top hits among the many unconvincing matches we found. 
+
+More notes in [protein_motif_database_searches_README.md](motif_analysis/protein_motif_database_searches_README.md).
 
 
 ## Note about R versions and renv
