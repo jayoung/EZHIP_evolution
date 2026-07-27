@@ -36,17 +36,15 @@ And the R script [`protein_motif_logo_plots.Rmd`](motif_analysis/protein_motif_l
 - determine conservation levels at each motif position 
 - replot motif logo plots using the chosen color scheme, and adding star symbols to residues conserved in >=80% of motif occurrences
 
-## Additional analysis beyond the paper
+## Using EZHIP protein motifs to search genome 6-frame translations and proteomes
 
-There's a paragraph in the revised manuscript that reads (something like this):
+There's a paragraph in the revised manuscript that reads:
 
-"We leveraged these motifs to perform more sensitive searches of selected genomes and predicted proteomes, using both Hidden Markov Models and the MAST algorithm (see Methods). We found no convincing homology in species outside of placental mammals, confirming our inferred age of EZHIP. Outside of EZHIP and some recent duplicates we identified using blast searches (see below), we found no evidence for additional in selected placental mammal genomes. We also looked for other genes containing just the KLP motif, and found no clear matches, including in the genomes of Afrotherian species where EZHIP lacks the KLP. The evolutionary origin of EZHIP and the KLP motif therefore remains unclear."
+"We leveraged these motifs to perform more sensitive searches of selected genomes and predicted proteomes, using three methods (Hidden Markov Models, FIMO and MAST searches, see Methods). We found no convincing homology in species outside of placental mammals, confirming our inferred age of EZHIP. Other than EZHIP and some recent duplicates identified using blast searches (see below), we found no evidence for additional paralogs in selected placental mammal genomes. We also looked for additional genes containing only the KLP motif and found no clear matches, including in the genomes of Afrotherian species where EZHIP lacks the KLP. The evolutionary origin of EZHIP and the KLP motif therefore remains unclear."
 
-There are no figures/tables associated with this statement - we provide search output here for full transparency.
+We provide search output here for full transparency, although there are no figures/tables in the manuscript associated with this statement.
 
-The motif search output files can be downloaded from [Zenodo](https://doi.org/10.5281/zenodo.21629929), and the [R script output](protein_motif_database_searches_process_output.md) shows details of the top hits among the many unconvincing matches we found. 
-
-More notes in [protein_motif_database_searches_README.md](motif_analysis/protein_motif_database_searches_README.md).
+The motif search output files can be downloaded from [Zenodo](https://doi.org/10.5281/zenodo.21629929), and the [R script output](protein_motif_database_searches_process_output.md) shows details of the top hits among the many unconvincing matches we found.  More notes in [protein_motif_database_searches_README.md](motif_analysis/protein_motif_database_searches_README.md).
 
 
 ## Note about R versions and renv
