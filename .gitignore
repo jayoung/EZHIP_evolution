@@ -3,6 +3,13 @@
 ## within each folder I'll put a file with a name like this so I know where within the EZHIP_janet repo the files came from 
 file_source_notes*.md
 
+## keep it simple and ONLY give the command used for phylogenies
+phylogenies
+
+## some checking stuff
+check_trees.Rmd
+check_trees.md
+
 
 ## other files to ignore
 slurm-*

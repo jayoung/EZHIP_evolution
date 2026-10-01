@@ -9,11 +9,21 @@ WORK IN PROGRESS!  Not ready to resubmit yet - still adding stuff
 
 ## Phylogenies
 
-Pravrutha ?
+Amino acid phylogenies were made using a command of this form:
+
+```
+mpirun -n 10 --oversubscribe \
+    phyml-mpi \
+        -i input_alignment.phy \
+        -d aa --sequential \
+        -m JTT \
+        --pinv e --alpha e -f e \
+        -b 100 > output_tree.nwk
+```
 
 ## RNA-seq analysis
 
-Pravrutha / Alice ?
+Pravrutha will send me some files xxx
 
 
 ## PAML analysis
@@ -65,3 +75,5 @@ When I want to install some packages:
 
 After I install or update packages, and I'm happy that everything runs OK, I lock the setup: `renv::snapshot()`
 
+The following required packages are not installed:
+- BiocVersion  [required by AnnotationDbi, Biobase, BiocFileCache, and 25 others]
