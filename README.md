@@ -22,8 +22,9 @@ mpirun -n 10 --oversubscribe \
 
 ## RNA-seq analysis
 
-Pravrutha will send me some files xxx
-
+In the `RNAseq_analysis` directory:
+- [`RNAseq_Example_Script.Rmd`](https://github.com/jayoung/EZHIP_evolution/blob/main/RNAseq_analysis/RNAseq_Example_Script.Rmd) is an example script to process output of bedtools multicov (counts RNA-seq reads per gene), convert those counts to RPKM, and plot.
+- [`RNAseq_Example_Script.md`](https://github.com/jayoung/EZHIP_evolution/blob/main/RNAseq_analysis/RNAseq_Example_Script.md) is the rendered output of that script
 
 ## PAML analysis
 
