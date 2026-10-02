@@ -2,7 +2,7 @@ protein_motif_logo_plots
 ================
 Janet Young
 
-2026-07-27
+2026-10-02
 
 # Read MEME output
 
@@ -287,32 +287,32 @@ sessionInfo()
     ## tzcode source: system (glibc)
     ## 
     ## attached base packages:
-    ## [1] stats4    stats     graphics  grDevices utils     datasets  methods  
+    ## [1] stats4    stats     graphics  grDevices datasets  utils     methods  
     ## [8] base     
     ## 
     ## other attached packages:
     ##  [1] Biostrings_2.78.0     Seqinfo_1.0.0         XVector_0.50.0       
-    ##  [4] IRanges_2.44.0        S4Vectors_0.48.1      BiocGenerics_0.56.0  
+    ##  [4] IRanges_2.44.0        S4Vectors_0.48.0      BiocGenerics_0.56.0  
     ##  [7] generics_0.1.4        ggseqlogo_0.2.2       universalmotif_1.28.0
     ## [10] janitor_2.2.1         patchwork_1.3.2       here_1.0.2           
     ## [13] lubridate_1.9.5       forcats_1.0.1         stringr_1.6.0        
     ## [16] dplyr_1.2.1           purrr_1.2.2           readr_2.2.0          
-    ## [19] tidyr_1.3.2           tibble_3.3.1          ggplot2_4.0.2        
+    ## [19] tidyr_1.3.2           tibble_3.3.1          ggplot2_4.0.3        
     ## [22] tidyverse_2.0.0      
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] stringi_1.8.7         hms_1.1.4             digest_0.6.39        
-    ##  [4] magrittr_2.0.5        evaluate_1.0.5        grid_4.5.2           
-    ##  [7] timechange_0.4.0      RColorBrewer_1.1-3    fastmap_1.2.0        
-    ## [10] rprojroot_2.1.1       scales_1.4.0          textshaping_1.0.5    
-    ## [13] cli_3.6.6             crayon_1.5.3          rlang_1.2.0          
-    ## [16] withr_3.0.3           yaml_2.3.12           otel_0.2.0           
-    ## [19] tools_4.5.2           tzdb_0.5.0            vctrs_0.7.2          
-    ## [22] R6_2.6.1              matrixStats_1.5.0     lifecycle_1.0.5      
-    ## [25] snakecase_0.11.1      MASS_7.3-65           ragg_1.5.2           
-    ## [28] pkgconfig_2.0.3       pillar_1.11.1         gtable_0.3.6         
-    ## [31] Rcpp_1.1.2            glue_1.8.1            systemfonts_1.3.2    
-    ## [34] xfun_0.57             tidyselect_1.2.1      MatrixGenerics_1.22.0
-    ## [37] rstudioapi_0.19.0     knitr_1.51            dichromat_2.0-0.1    
-    ## [40] farver_2.1.2          htmltools_0.5.9       rmarkdown_2.31       
-    ## [43] compiler_4.5.2        S7_0.2.1
+    ##  [1] renv_1.2.3            stringi_1.8.7         hms_1.1.4            
+    ##  [4] digest_0.6.39         magrittr_2.0.5        evaluate_1.0.5       
+    ##  [7] grid_4.5.2            timechange_0.4.0      RColorBrewer_1.1-3   
+    ## [10] fastmap_1.2.0         rprojroot_2.1.1       BiocManager_1.30.27  
+    ## [13] scales_1.4.0          textshaping_1.0.5     cli_3.6.6            
+    ## [16] rlang_1.3.0           crayon_1.5.3          withr_3.0.3          
+    ## [19] yaml_2.3.12           otel_0.2.0            tools_4.5.2          
+    ## [22] tzdb_0.5.0            vctrs_0.7.3           R6_2.6.1             
+    ## [25] matrixStats_1.5.0     lifecycle_1.0.5       snakecase_0.11.1     
+    ## [28] MASS_7.3-65           ragg_1.5.2            pkgconfig_2.0.3      
+    ## [31] pillar_1.11.1         gtable_0.3.6          Rcpp_1.1.2           
+    ## [34] glue_1.8.1            systemfonts_1.3.2     xfun_0.60            
+    ## [37] tidyselect_1.2.1      MatrixGenerics_1.22.0 rstudioapi_0.19.0    
+    ## [40] knitr_1.51            farver_2.1.2          htmltools_0.5.9      
+    ## [43] rmarkdown_2.31        compiler_4.5.2        S7_0.2.2

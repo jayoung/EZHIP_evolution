@@ -5,7 +5,6 @@ Files and scripts related to EZHIP evolution manuscript "Dynamic evolution of EZ
 [BioRxiv preprint](https://www.biorxiv.org/content/10.64898/2025.12.12.693809v2)
 
 
-WORK IN PROGRESS!  Not ready to resubmit yet - still adding stuff
 
 ## Phylogenies
 

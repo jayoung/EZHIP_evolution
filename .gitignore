@@ -5,6 +5,7 @@ file_source_notes*.md
 
 ## keep it simple and ONLY give the command used for phylogenies
 phylogenies
+RNAseq_Example_origPR.Rmd
 
 ## some checking stuff
 check_trees.Rmd
