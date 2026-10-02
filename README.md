@@ -1,8 +1,6 @@
 # EZHIP_evolution
 
-Files and scripts related to EZHIP evolution manuscript "Dynamic evolution of EZHIP, an inhibitor of the Polycomb Repressive Complex 2 in mammals", Raman et al 2026
-
-[BioRxiv preprint](https://www.biorxiv.org/content/10.64898/2025.12.12.693809v2)
+Files and scripts related to EZHIP evolution manuscript "Dynamic evolution of EZHIP, an inhibitor of the Polycomb Repressive Complex 2 in mammals", Raman et al 2026. [BioRxiv preprint](https://www.biorxiv.org/content/10.64898/2025.12.12.693809v2).
 
 
 
@@ -54,7 +52,7 @@ There's a paragraph in the revised manuscript that reads:
 
 We provide search output here for full transparency, although there are no figures/tables in the manuscript associated with this statement.
 
-The motif search output files can be downloaded from [Zenodo](https://doi.org/10.5281/zenodo.21629929), and the [R script output](protein_motif_database_searches_process_output.md) shows details of the top hits among the many unconvincing matches we found.  More notes in [protein_motif_database_searches_README.md](motif_analysis/protein_motif_database_searches_README.md).
+The motif search output files can be downloaded from [Zenodo](https://doi.org/10.5281/zenodo.21629929), and the [R script output](motif_analysis/protein_motif_database_searches_process_output.md) shows details of the top hits among the many unconvincing matches we found.  More notes in [protein_motif_database_searches_README.md](motif_analysis/protein_motif_database_searches_README.md).
 
 
 ## Note about R versions and renv
